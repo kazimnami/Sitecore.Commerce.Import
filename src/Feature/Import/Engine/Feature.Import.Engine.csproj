@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Sitecore.Commerce.Plugin.Catalog" Version="2.0.*" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Pipelines\Blocks\" />
+    <Folder Include="Policies\" />
+  </ItemGroup>
+
+</Project>
