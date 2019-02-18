@@ -3,14 +3,22 @@
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
   </PropertyGroup>
-  
+
   <ItemGroup>
-    <PackageReference Include="Sitecore.Commerce.Plugin.Catalog" Version="2.0.*" />
+    <Compile Remove="Pipelines\Blocks\**" />
+    <Compile Remove="Policies\**" />
+    <EmbeddedResource Remove="Pipelines\Blocks\**" />
+    <EmbeddedResource Remove="Policies\**" />
+    <None Remove="Pipelines\Blocks\**" />
+    <None Remove="Policies\**" />
   </ItemGroup>
   
   <ItemGroup>
-    <Folder Include="Pipelines\Blocks\" />
-    <Folder Include="Policies\" />
+    <PackageReference Include="Sitecore.Commerce.Plugin.Catalog" Version="2.2.46" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Catalog\Engine\Feature.Catalog.Engine.csproj" />
   </ItemGroup>
 
 </Project>

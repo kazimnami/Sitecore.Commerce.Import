@@ -102,7 +102,7 @@ namespace Feature.Catalog.Engine
 
             if (variation.HasComponent<ProductExtensionComponent>() == false)
             {
-                var component = instance.GetComponent<ProductExtensionComponent>().Copy();
+                var component = instance.GetComponent<ProductExtensionComponent>().Clone();
                 variation.SetComponent(component);
 
                 return component;
