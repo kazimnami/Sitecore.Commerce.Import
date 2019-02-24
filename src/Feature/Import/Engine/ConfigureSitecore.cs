@@ -16,7 +16,7 @@ namespace Feature.Import.Engine
             services.Sitecore().Pipelines(config => config
                 .AddPipeline<IImportDataPipeline, ImportDataPipeline>(p => p
                     //.Add<Catalog.Engine.IImportCatalogsPipeline>()
-                    //.Add<Catalog.Engine.IImportCategoriesPipeline>()
+                    .Add<Catalog.Engine.ImportCategoriesFromFileBlock>()
                     //.Add<Media.Engine.IImportMediaPipeline>()
                     .Add<Catalog.Engine.ImportSellableItemsFromFileBlock>()
                     //.Add<Inventory.Engine.IImportInventoryPipeline>()

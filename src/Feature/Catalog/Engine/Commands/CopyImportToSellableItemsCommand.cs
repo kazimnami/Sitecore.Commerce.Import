@@ -1,7 +1,7 @@
-﻿using Sitecore.Commerce.Core;
+﻿using Microsoft.Extensions.Logging;
+using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Core.Commands;
 using Sitecore.Commerce.Plugin.Catalog;
-using Sitecore.Commerce.Plugin.ManagedLists;
 using Sitecore.Commerce.Plugin.Pricing;
 using System;
 using System.Collections.Generic;
@@ -14,10 +14,13 @@ namespace Feature.Catalog.Engine
     {
         public CopyImportToSellableItemsCommand(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
-        public void Process(CommerceContext commerceContext, IEnumerable<SellableItem> allImportItems, IEnumerable<SellableItem> changedItems)
+        public async Task Process(CommerceContext commerceContext, IEnumerable<SellableItem> allImportItems, IEnumerable<SellableItem> changedItems)
         {
             using (CommandActivity.Start(commerceContext, this))
             {
+                var catalogNameList = changedItems.Select(i => i.GetPolicy<TransientImportSellableItemDataPolicy>()).SelectMany(d => d.CatalogAssociationList).Select(a => a.Name).Distinct();
+                var catalogContextList = await Command<GetCatalogContextCommand>().Process(commerceContext, catalogNameList);
+
                 foreach (var item in changedItems)
                 {
                     var itemNewData = allImportItems.FirstOrDefault(i => i.ProductId.Equals(item.ProductId));
@@ -27,8 +30,8 @@ namespace Feature.Catalog.Engine
                     CopyCore(itemNewData, item);
                     CopyListPrice(itemNewData, item);
                     CopyProductExtension(itemNewData, item);
+                    await CopyCategory(commerceContext, catalogContextList, itemNewData, item); // Must copy categories before catalog
                     CopyCatalog(itemNewData, item);
-                    CopyCategory(itemNewData, item);
                     CopyImages(itemNewData, item);
                 }
             }
@@ -62,15 +65,74 @@ namespace Feature.Catalog.Engine
             item.Components.Add(itemNewData.GetComponent<ProductExtensionComponent>());
         }
 
+        private async Task CopyCategory(CommerceContext commerceContext, IEnumerable<CatalogContextModel> catalogContextList, SellableItem itemNewData, SellableItem item)
+        {
+            var existingCategoryList = item.ParentCategoryList.Split('|');
+            var newCategoryList = itemNewData.ParentCategoryList.Split('|');
+
+            var associationsToCreate = newCategoryList.Except(existingCategoryList).ToList();
+            var associationsToRemove = existingCategoryList.Except(newCategoryList).ToList();
+
+            CopyCategoryAddressAdded(commerceContext, item, associationsToCreate);
+            await CopyCategoryAddressRemoved(commerceContext, item, associationsToRemove);
+
+            item.ParentCategoryList = itemNewData.ParentCategoryList;
+        }
+
+        private void CopyCategoryAddressAdded(CommerceContext commerceContext, SellableItem existingItem, List<string> associationsToCreate)
+        {
+            var transientData = existingItem.GetPolicy<TransientImportSellableItemDataPolicy>();
+            transientData.ParentAssociationsToCreateList = transientData.ParentAssociationsToCreateList.Where(a => associationsToCreate.Contains(a.ParentSitecoreId)).ToList();
+        }
+
+        private async Task CopyCategoryAddressRemoved(CommerceContext commerceContext, SellableItem existingItem, List<string> associationsToRemove)
+        {
+            if (associationsToRemove == null || associationsToRemove.Count().Equals(0))
+                return;
+
+            var transientData = existingItem.GetPolicy<TransientImportSellableItemDataPolicy>();
+
+            var allCatalogs = commerceContext.GetObject<IEnumerable<Sitecore.Commerce.Plugin.Catalog.Catalog>>();
+            if (allCatalogs == null)
+            {
+                allCatalogs = await Command<GetCatalogsCommand>().Process(commerceContext);
+                commerceContext.AddObject(allCatalogs);
+            }
+
+            var existingCatalogSitecoreIdList = existingItem.ParentCatalogList.Split('|');
+
+            var catalogNameList = new List<string>();
+            foreach (var catalogSitecoreId in existingCatalogSitecoreIdList)
+            {
+                var catalog = allCatalogs.FirstOrDefault(c => c.SitecoreId.Equals(catalogSitecoreId));
+                catalogNameList.Add(catalog.Name);
+            }
+
+            var catalogContextList = await Command<GetCatalogContextCommand>().Process(commerceContext, catalogNameList);
+            foreach (var categoryToRemoveSitecoreId in associationsToRemove)
+            {
+                bool found = false;
+                foreach (var catalogContext in catalogContextList)
+                {
+                    catalogContext.CategoriesBySitecoreId.TryGetValue(categoryToRemoveSitecoreId, out Category category);
+
+                    if (category != null)
+                    {
+                        transientData.ParentAssociationsToRemoveList.Add(new ParentAssociationModel(catalogContext.Catalog.Id, category));
+
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    commerceContext.Logger.LogWarning($"Unable to find category with SitecoreId {categoryToRemoveSitecoreId}. We need to disacciate it from SellableItem {existingItem.Id}");
+            }
+        }
+
         private void CopyCatalog(SellableItem itemNewData, SellableItem item)
         {
             item.ParentCatalogList = itemNewData.ParentCatalogList;
-        }
-
-        private void CopyCategory(SellableItem itemNewData, SellableItem item)
-        {
-
-            item.ParentCategoryList = itemNewData.ParentCategoryList;
         }
 
         private void CopyImages(SellableItem itemNewData, SellableItem item)

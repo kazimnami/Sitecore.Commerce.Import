@@ -12,17 +12,17 @@ using System.Threading.Tasks;
 
 namespace Feature.Catalog.Engine
 {
-    public class ImportSellableItemsFromFileBlock : PipelineBlock<string, string, CommercePipelineExecutionContext>
+    public class ImportCategoriesFromFileBlock : PipelineBlock<string, string, CommercePipelineExecutionContext>
     {
         private CommerceCommander CommerceCommander { get; set; }
 
-        public ImportSellableItemsFromFileBlock(
+        public ImportCategoriesFromFileBlock(
             IServiceProvider serviceProvider)
         {
             CommerceCommander = serviceProvider.GetService<CommerceCommander>();
         }
 
-        private void LogInitialization(CommercePipelineExecutionContext context, ImportSellableItemsPolicy policy)
+        private void LogInitialization(CommercePipelineExecutionContext context, ImportCategoriesPolicy policy)
         {
             var log = new StringBuilder();
             log.AppendLine($"{System.Environment.NewLine}");
@@ -41,10 +41,8 @@ namespace Feature.Catalog.Engine
 
         public override async Task<string> Run(string arg, CommercePipelineExecutionContext context)
         {
-            var importPolicy = context.GetPolicy<ImportSellableItemsPolicy>();
-            var sellableItemComparerByProductId = new ImportSellableItemComparer(SellableItemComparerConfiguration.ByProductId);
-            var sellableItemComparerByImportData = new ImportSellableItemComparer(SellableItemComparerConfiguration.ByImportData);
-
+            var importPolicy = context.GetPolicy<ImportCategoriesPolicy>();
+            
             LogInitialization(context, importPolicy);
 
             try
@@ -69,22 +67,23 @@ namespace Feature.Catalog.Engine
                             importRawLines.Add(reader.ReadLine().Split(new string[] { importPolicy.FileGroupSeparator }, new StringSplitOptions()));
                         }
 
-                        var importItems = await CommerceCommander.Command<TransformImportToSellableItemsCommand>().Process(context.CommerceContext, importRawLines);
-                        var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
+                        var importItems = CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
 
-                        var newItems = importItems.Except(existingItems, sellableItemComparerByProductId);
-                        var changedItems = existingItems.Except(importItems, sellableItemComparerByImportData);
 
-                        await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
+                        // TODO: var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
 
-                        await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems));
-                        await CommerceCommander.Command<AssociateSellableItemToParentBulkCommand>().Process(context.CommerceContext, importItems);
+                        // TODO: var newItems = importItems.Except(existingItems, sellableItemComparerByProductId);
+                        // TODO: var changedItems = existingItems.Except(importItems, sellableItemComparerByImportData);
+
+                        // TODO: await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
+
+                        await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, importItems);
+                        // TODO: await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems);
+                        await CommerceCommander.Command<AssociateCategoryToParentBulkCommand>().Process(context.CommerceContext, importItems);
                         // TODO: complete this command
-                        // await CommerceCommander.Command<DisassociateSellableItemToParentBulkCommand>().Process(context.CommerceContext, importItems));
+                        // TODO: await CommerceCommander.Command<DisassociateSellableItemToParentBulkCommand>().Process(context.CommerceContext, importItems));
 
-                        // TODO: Replace all direct creation of sellableitem, category, catalog id creation to include Sitecore.Commerce.Plugin.Catalog.StringExtensions
-
-                        RemoveTransientData(importItems);
+                        //RemoveTransientData(importItems);
 
                         await Task.Delay(importPolicy.SleepBetweenBatches);
                     }

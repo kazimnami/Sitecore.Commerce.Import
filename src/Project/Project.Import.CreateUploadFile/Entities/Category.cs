@@ -1,8 +1,11 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
-namespace Project.Import.CreateUploadFile.Entities
+namespace Project.Import.CreateUploadFile
 {
     public class Category
     {
@@ -14,14 +17,19 @@ namespace Project.Import.CreateUploadFile.Entities
 
         public override string ToString()
         {
-            return $"CATEGORY: Id:{Id}, DisplayName:{DisplayName}, URL:{Url}";
+            return $"CATEGORY: Id:{Id}, DisplayName:{DisplayName}";
         }
 
-        public static Category Add(Dictionary<string, Category> categoryList, string parentCategoryId, string level, string displayName, HtmlAttribute url)
+        public static Category Add(Dictionary<string, Category> categoryList, string parentCategoryId, string displayName, HtmlAttribute url)
         {
+            displayName = WebUtility.HtmlDecode(displayName);
+            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+
+            var id = textInfo.ToTitleCase(RemoveSpecialChars(displayName.ToLower())).Replace(" ", "");
+
             var item = new Category
             {
-                Id = (level + "_" + displayName).ToLower().Replace(" ", "_"),
+                Id = string.IsNullOrEmpty(parentCategoryId) ? id : $"{parentCategoryId}_{id}",
                 ParentCategoryId = parentCategoryId,
                 DisplayName = displayName,
                 Url = url != null ? url.Value : "",
@@ -30,8 +38,18 @@ namespace Project.Import.CreateUploadFile.Entities
 
             Console.WriteLine(item.ToString());
 
-            categoryList.Add(item.Id, item);
+            try
+            {
+                categoryList.Add(item.Id, item);
+            }
+            catch (ArgumentException) {}
+
             return item;
+        }
+
+        public static string RemoveSpecialChars(string input)
+        {
+            return Regex.Replace(input, @"[^0-9a-z ]", string.Empty, RegexOptions.Compiled);
         }
     }
 }

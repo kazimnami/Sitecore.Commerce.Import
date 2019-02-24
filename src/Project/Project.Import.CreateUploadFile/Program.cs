@@ -1,5 +1,4 @@
 ﻿using HtmlAgilityPack;
-using Project.Import.CreateUploadFile.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,19 +10,27 @@ namespace Project.Import.CreateUploadFile
 {
     class Program
     {
+        private const string CatalogName = "BBQG"; // "Habitat_Master"; 
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            try
+            {
+                var categoryList = new Dictionary<string, Category>();
+                var productList = new Dictionary<string, Product>();
 
-            var categoryList = new Dictionary<string, Category>();
-            var productList = new Dictionary<string, Product>();
-
-            GetCategoryhierarchy(categoryList);
-            GetCategoryToProductAssociation(categoryList, productList);
-            //GetCategories();
-            GetProducts(productList);
-            GetImages(productList);
-            CreateFile(productList);
+                GetCategoryhierarchy(categoryList);
+                GetCategoryToProductAssociation(categoryList, productList);
+                //GetCategories();
+                GetProducts(productList);
+                GetImages(productList);
+                CreateFile(productList);
+                CreateFile(categoryList);
+            }
+            catch (Exception exp)
+            {
+                Console.WriteLine(exp.Message);
+                Console.ReadLine();
+            }
         }
 
         private static void GetCategoryhierarchy(Dictionary<string, Category> categoryList)
@@ -44,8 +51,9 @@ namespace Project.Import.CreateUploadFile
                 url = (url.StartsWith("/")) ? Sites.BBQG.Config.Retrieve(Sites.BBQG.Config.Url) + url : url;
 
                 GetCategoryToProductAssociationByPage(productList, category, url);
-                return;
             }
+
+            categoryList.Values.Where(c => c.ProductIdList.Count() == 0).ToList().ForEach(c => categoryList.Remove(c.Id));
         }
 
         private static void GetCategoryToProductAssociationByPage(Dictionary<string, Product> productList, Category category, string url)
@@ -54,10 +62,14 @@ namespace Project.Import.CreateUploadFile
             Console.WriteLine($"***************************************************************************************");
             Console.WriteLine("Retrieving product from page " + url);
 
+            if (string.IsNullOrEmpty(url)) return;
+
             var web = new HtmlWeb();
             var doc = web.Load(url);
 
             var productNodeList = doc.DocumentNode.SelectNodes("//ul[starts-with(@class, 'products-grid')]/li[@class='item']");
+
+            if (productNodeList == null) return;
 
             foreach (var product in productNodeList)
             {
@@ -68,11 +80,11 @@ namespace Project.Import.CreateUploadFile
                 var displayName = node.Attributes["title"].Value;
 
                 Product.AddUpdate(productList, category, productId, displayName, productUrl);
-                return;
             }
 
             var pagerNodeList = doc.DocumentNode.SelectNodes("//div[@class='pages']/ol/li");
-            return;
+
+            if (pagerNodeList == null) return;
 
             // will only move to the next page if the last page isn't the current page.
             for (int i = 0; i < pagerNodeList.Count() - 1; i++)
@@ -86,50 +98,48 @@ namespace Project.Import.CreateUploadFile
             }
         }
 
-        private static void GetRootCategories(HtmlNode categoryNode, Dictionary<string, Category> categoryList)
+        private static void GetRootCategories(HtmlNode startNode, Dictionary<string, Category> categoryList)
         {
-            var categoryNodeList = categoryNode.SelectNodes(".//ol/ul/li[starts-with(@class, 'level0')]");
+            var categoryNodeList = startNode.SelectNodes(".//ol/ul/li[starts-with(@class, 'level0')]");
 
-            foreach (var category in categoryNodeList)
+            foreach (var categoryNode in categoryNodeList)
             {
-                var node = category.SelectSingleNode(".//a[contains(@class, 'level0')]");
+                var node = categoryNode.SelectSingleNode(".//a[contains(@class, 'level0')]");
 
                 Console.WriteLine();
                 Console.WriteLine($"***************************************************************************************");
 
-                Category.Add(categoryList, "", "level0", node.InnerHtml, node.Attributes["href"]);
-                return;
-                GetLevel1Categories(category, categoryList);
+                var category = Category.Add(categoryList, "", node.InnerHtml, node.Attributes["href"]);
+                GetLevel1Categories(categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel1Categories(HtmlNode categoryNode, Dictionary<string, Category> categoryList)
+        private static void GetLevel1Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
-            var categoryNodeList = categoryNode.SelectNodes(".//div[starts-with(@class, 'level1')]");
+            var categoryNodeList = startNode.SelectNodes(".//div[starts-with(@class, 'level1')]");
 
             if (categoryNodeList == null) return;
-            foreach (var category in categoryNodeList)
+            foreach (var categoryNode in categoryNodeList)
             {
-                var node = category.SelectSingleNode(".//a[contains(@class, 'level1')]");
+                var node = categoryNode.SelectSingleNode(".//a[contains(@class, 'level1')]");
 
                 if (node == null) continue;
 
-                Category.Add(categoryList, "", "level1", node.InnerHtml, node.Attributes["href"]);
-
-                GetLevel2Categories(category, categoryList);
+                var category = Category.Add(categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"]);
+                GetLevel2Categories(categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel2Categories(HtmlNode categoryNode, Dictionary<string, Category> categoryList)
+        private static void GetLevel2Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
-            var categoryNodeList = categoryNode.SelectNodes(".//li[starts-with(@class, 'level2')]");
+            var categoryNodeList = startNode.SelectNodes(".//li[starts-with(@class, 'level2')]");
 
             if (categoryNodeList == null) return;
-            foreach (var category in categoryNodeList)
+            foreach (var categoryNode in categoryNodeList)
             {
-                var node = category.SelectSingleNode(".//a");
+                var node = categoryNode.SelectSingleNode(".//a");
 
-                Category.Add(categoryList, "", "level2", node.InnerHtml, node.Attributes["href"]);
+                Category.Add(categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"]);
             }
         }
 
@@ -200,7 +210,7 @@ namespace Project.Import.CreateUploadFile
 
             var fileName = $"ProductImport_{DateTime.Now.ToString("yyyyMMdd")}";
             var directoryLocation = @"c:\Import";
-            var filePath = Path.Combine(directoryLocation, fileName, ".csv");
+            var filePath = Path.Combine(directoryLocation, fileName + ".csv");
             var directoryInfo = Directory.CreateDirectory(directoryLocation);
 
             using (var file = File.CreateText(filePath))
@@ -218,14 +228,14 @@ namespace Project.Import.CreateUploadFile
                     "ListPrice", // 8
                     "Images", // 9
                     "CatalogName", // 10
-                    "CategoryName", // 13
-                    "Style", // 14
-                    "FuelType", // 15
-                    "NaturalGasConversionAvailable", // 15
-                    "DimensionsHeightHoodOpen", // 16
-                    "DimensionsHeightHoodClosed", // 17
-                    "DimensionsWidth", // 18
-                    "DimensionsDepth", // 19
+                    "CategoryName", // 11
+                    "Style", // 12
+                    "FuelType", // 13
+                    "NaturalGasConversionAvailable", // 14
+                    "DimensionsHeightHoodOpen", // 15
+                    "DimensionsHeightHoodClosed", // 16
+                    "DimensionsWidth", // 17
+                    "DimensionsDepth", // 18
                 };
 
                 file.WriteLine(string.Join(',', headerList));
@@ -244,21 +254,62 @@ namespace Project.Import.CreateUploadFile
                     line.Append(",");//"Tags", // 7
                     line.Append("USD-" + product.Price + ",");//"ListPrice", // 8
                     line.Append(string.Join('|', product.ImageNameList) + ",");//"Images", // 9
-                    line.Append("BBQG,");//"CatalogName", // 10
-                    line.Append(string.Join('|', product.CategoryIdList) + ",");//"CategoryName", // 13
-                    line.Append(",");//"Style", // 14
-                    line.Append(",");//"FuelType", // 15
-                    line.Append(",");//"NaturalGasConversionAvailable", // 15
-                    line.Append(",");//"DimensionsHeightHoodOpen", // 16
-                    line.Append(",");//"DimensionsHeightHoodClosed", // 17
-                    line.Append(",");//"DimensionsWidth", // 18
-                    //line.Append();//"DimensionsDepth", // 19
+                    line.Append(CatalogName + ",");//"CatalogName", // 10
+                    product.CategoryIdList.ForEach(c => line.Append(string.Join("^^", $"{CatalogName}^-{c}"))); //"CategoryName", // 11
+                    line.Append(", ");//"CategoryName", // 11
+                    line.Append(",");//"Style", // 12
+                    line.Append(",");//"FuelType", // 13
+                    line.Append(",");//"NaturalGasConversionAvailable", // 14
+                    line.Append(",");//"DimensionsHeightHoodOpen", // 15
+                    line.Append(",");//"DimensionsHeightHoodClosed", // 16
+                    line.Append(",");//"DimensionsWidth", // 17
+                    //line.Append();//"DimensionsDepth", // 18
 
                     file.WriteLine(line);
                 }
             }
 
-            File.Move(filePath, Path.Combine(directoryLocation, fileName, ".CSV"));
+            File.Move(filePath, Path.Combine(directoryLocation, fileName + ".CSV"));
         }
+
+        private static void CreateFile(Dictionary<string, Category> categoryList)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"***************************************************************************************");
+            Console.WriteLine("Creating File");
+
+            var fileName = $"CategoryImport_{DateTime.Now.ToString("yyyyMMdd")}";
+            var directoryLocation = @"c:\Import";
+            var filePath = Path.Combine(directoryLocation, fileName + ".csv");
+            var directoryInfo = Directory.CreateDirectory(directoryLocation);
+
+            using (var file = File.CreateText(filePath))
+            {
+                var headerList = new List<string>
+                {
+                    "CatalogName", // 0
+                    "CategoryName", // 1
+                    "ParentCategoryName", // 2
+                    "CategoryDisplayName", // 3
+                };
+
+                file.WriteLine(string.Join(',', headerList));
+
+                var line = new StringBuilder();
+                foreach (var category in categoryList.Values)
+                {
+                    line.Clear();
+                    line.Append(CatalogName + ","); //"CatalogName", // 0
+                    line.Append(category.Id + ","); //"CategoryName", // 1
+                    line.Append(category.ParentCategoryId + ",");//"ParentCategoryName", // 2
+                    line.Append(category.DisplayName); //"DisplayName", // 3
+
+                    file.WriteLine(line);
+                }
+            }
+
+            File.Move(filePath, Path.Combine(directoryLocation, fileName + ".CSV"));
+        }
+
     }
 }

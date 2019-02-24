@@ -4,7 +4,6 @@ using Sitecore.Commerce.Core.Commands;
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Feature.Catalog.Engine
 {
@@ -14,13 +13,14 @@ namespace Feature.Catalog.Engine
 
         public GetFileCommand(IServiceProvider serviceProvider, IHostingEnvironment hostingEnvironment) : base(serviceProvider)
         {
-            this.HostingEnvironment = hostingEnvironment;
+            HostingEnvironment = hostingEnvironment;
         }
 
         public string Process(CommerceContext commerceContext, string folderPath, string filePrefix, string fileExtention)
         {
             using (CommandActivity.Start(commerceContext, this))
             {
+
                 //string directoryPath = Path.Combine(this.HostingEnvironment.WebRootPath, folderPath);
                 string directoryPath = @"C:\Import";
 
@@ -43,8 +43,9 @@ namespace Feature.Catalog.Engine
                         break;
                     }
                 }
+
+                return null;
             }
-            return null;
         }
     }
 }

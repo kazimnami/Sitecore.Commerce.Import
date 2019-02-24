@@ -1,4 +1,5 @@
-﻿using Sitecore.Commerce.Core;
+﻿using Microsoft.Extensions.Logging;
+using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Core.Commands;
 using Sitecore.Commerce.Plugin.Catalog;
 using Sitecore.Commerce.Plugin.ManagedLists;
@@ -7,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Feature.Catalog.Engine
 {
@@ -44,22 +44,22 @@ namespace Feature.Catalog.Engine
         {
             using (CommandActivity.Start(commerceContext, this))
             {
+                var importPolicy = commerceContext.GetPolicy<ImportSellableItemsPolicy>();
                 var importItems = new List<SellableItem>();
-                var transientDataList = new List<TransientImportDataPolicy>();
+                var transientDataList = new List<TransientImportSellableItemDataPolicy>();
                 foreach (var rawFields in importRawLines)
                 {
                     var item = new SellableItem();
                     TransformCore(commerceContext, rawFields, item);
-                    TransformListPrice(rawFields, item);
+                    TransformListPrice(importPolicy, rawFields, item);
                     TransformProductExtension(rawFields, item);
-                    TransformTransientData(rawFields, item, transientDataList);
+                    TransformTransientData(importPolicy, rawFields, item, transientDataList);
                     importItems.Add(item);
                 }
 
                 await TransformCatalog(commerceContext, transientDataList, importItems);
-                await TransformCategory(commerceContext, transientDataList, importItems);
+                await TransformCategory(commerceContext, importPolicy, transientDataList, importItems);
                 await TransformImages(commerceContext, transientDataList, importItems);
-                RemoveTransientData(importItems);
 
                 return importItems;
             }
@@ -78,7 +78,7 @@ namespace Feature.Catalog.Engine
             item.Brand = rawFields[BrandIndex];
             item.Manufacturer = rawFields[ManufacturerIndex];
             item.TypeOfGood = rawFields[TypeOfGoodIndex];
-            var tags = string.IsNullOrEmpty(rawFields[TagsIndex])? null : rawFields[TagsIndex].Split('|');
+            var tags = string.IsNullOrEmpty(rawFields[TagsIndex]) ? null : rawFields[TagsIndex].Split('|');
             item.Tags = tags == null ? new List<Tag>() : tags.Select(x => new Tag(x)).ToList();
 
             var component = item.GetComponent<ListMembershipsComponent>();
@@ -86,9 +86,9 @@ namespace Feature.Catalog.Engine
             component.Memberships.Add(commerceContext.GetPolicy<KnownCatalogListsPolicy>().CatalogItems);
         }
 
-        private void TransformListPrice(string[] rawFields, SellableItem item)
+        private void TransformListPrice(ImportSellableItemsPolicy importPolicy, string[] rawFields, SellableItem item)
         {
-            var listPrices = rawFields[ListPriceIndex].Split('|');
+            var listPrices = rawFields[ListPriceIndex].Split(new string[] { importPolicy.FileRecordSeparator }, new StringSplitOptions());
             var priceList = new List<Money>();
             foreach (var listPrice in listPrices)
             {
@@ -117,44 +117,65 @@ namespace Feature.Catalog.Engine
             });
         }
 
-        private void TransformTransientData(string[] rawFields, SellableItem item, List<TransientImportDataPolicy> transientDataList)
+        private void TransformTransientData(ImportSellableItemsPolicy importPolicy, string[] rawFields, SellableItem item, List<TransientImportSellableItemDataPolicy> transientDataList)
         {
-            var data = new TransientImportDataPolicy
+            var data = new TransientImportSellableItemDataPolicy
             {
-                ParentCatalogNameList = rawFields[CatalogNameIndex].Split('|').ToList(),
-                ParentCategoryNameList = rawFields[CategoryNameIndex].Split('|').ToList(),
-                ImageNameList = rawFields[ImagesIndex].Split('|')
+                ImageNameList = rawFields[ImagesIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.None)
             };
+
+            var catalogRecord = rawFields[CatalogNameIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.None).ToList();
+            foreach (var catalogUnit in catalogRecord)
+            {
+                data.CatalogAssociationList.Add(new CatalogAssociationModel { Name = catalogUnit });
+            }
+
+            var catalogCategoryRecord = rawFields[CategoryNameIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.None).ToList();
+            foreach (var catalogCategoryUnit in catalogCategoryRecord)
+            {
+                var units = catalogCategoryUnit.Split(new string[] { importPolicy.FileUnitSeparator }, StringSplitOptions.None);
+                if (units == null || units.Count() != 2) throw new Exception("Error, unexpected value in CategoryNameIndex");
+                data.CategoryAssociationList.Add(new CategoryAssociationModel { CatalogName = units[0], CategoryName = units[1] });
+            }
+
             item.Policies.Add(data);
             transientDataList.Add(data);
         }
 
-        private async Task TransformCatalog(CommerceContext commerceContext, List<TransientImportDataPolicy> transientDataList, List<SellableItem> importItems)
+        private async Task TransformCatalog(CommerceContext commerceContext, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
         {
-            var listOfCatalogNames = transientDataList.SelectMany(d => d.ParentCatalogNameList).ToList().Distinct();
-            var allCatalogs = await Command<GetCatalogsCommand>().Process(commerceContext);
+            var allCatalogs = commerceContext.GetObject<IEnumerable<Sitecore.Commerce.Plugin.Catalog.Catalog>>();
+
+            if (allCatalogs == null)
+            {
+                allCatalogs = await Command<GetCatalogsCommand>().Process(commerceContext);
+                commerceContext.AddObject(allCatalogs);
+            }
+
             var allCatalogsDictionary = allCatalogs.ToDictionary(c => c.Name);
 
             foreach (var item in importItems)
             {
-                var transientData = item.GetPolicy<TransientImportDataPolicy>();
+                var transientData = item.GetPolicy<TransientImportSellableItemDataPolicy>();
 
-                if (transientData.ParentCatalogNameList == null || transientData.ParentCatalogNameList.Count().Equals(0))
+                if (transientData.CatalogAssociationList == null || transientData.CatalogAssociationList.Count().Equals(0))
                     throw new Exception($"{item.Name}: needs to have at least one definied catalog");
 
                 var itemsCatalogList = new List<string>();
                 var catalogsComponent = item.GetComponent<CatalogsComponent>();
-                foreach (var catalogName in transientData.ParentCatalogNameList)
+                foreach (var catalogAssociation in transientData.CatalogAssociationList)
                 {
-                    allCatalogsDictionary.TryGetValue(catalogName, out Sitecore.Commerce.Plugin.Catalog.Catalog catalog);
+                    allCatalogsDictionary.TryGetValue(catalogAssociation.Name, out Sitecore.Commerce.Plugin.Catalog.Catalog catalog);
                     if (catalog != null)
                     {
+                        catalogAssociation.Id = catalog.Id;
+                        catalogAssociation.SitecoreId = catalog.SitecoreId;
                         itemsCatalogList.Add(catalog.SitecoreId);
-                        catalogsComponent.ChildComponents.Add(new CatalogComponent { Name = catalogName });
+                        catalogsComponent.ChildComponents.Add(new CatalogComponent { Name = catalogAssociation.Name });
                     }
                     else
                     {
-                        commerceContext.Logger.LogWarning($"Warning, Product with id {item.ProductId} attempting import into catalog {catalogName} which doesn't exist.");
+                        commerceContext.Logger.LogWarning($"Warning, Product with id {item.ProductId} attempting import into catalog {catalogAssociation.Name} which doesn't exist.");
                     }
                 }
 
@@ -163,35 +184,37 @@ namespace Feature.Catalog.Engine
             }
         }
 
-        private async Task TransformCategory(CommerceContext commerceContext, List<TransientImportDataPolicy> transientDataList, List<SellableItem> importItems)
+        private async Task TransformCategory(CommerceContext commerceContext, ImportSellableItemsPolicy importPolicy, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
         {
-            // This method would need to be enhanced if you need to support the same categories existing in multiple catalogs
-            // You would basically need to introduce a catalog to category lookup
-            var listOfCatalogNames = transientDataList.SelectMany(d => d.ParentCatalogNameList).ToList().Distinct();
-            if (listOfCatalogNames.Count() > 1) throw new Exception($"{nameof(TransformCategory)} does not currently support multiple catalogs");
-
-            var listOfCategoryNames = transientDataList.SelectMany(d => d.ParentCategoryNameList).ToList().Distinct();
-            var allCategories = await Command<GetCategoriesCommand>().Process(commerceContext, listOfCatalogNames.First());
-            var allCategoriesDictionary = allCategories.ToDictionary(c => c.Name);
+            var catalogNameList = transientDataList.SelectMany(d => d.CatalogAssociationList).Select(a => a.Name).Distinct();
+            var catalogContextList = await Command<GetCatalogContextCommand>().Process(commerceContext, catalogNameList);
 
             foreach (var item in importItems)
             {
-                var transientData = item.GetPolicy<TransientImportDataPolicy>();
+                var transientData = item.GetPolicy<TransientImportSellableItemDataPolicy>();
 
-                if (transientData.ParentCategoryNameList == null || transientData.ParentCategoryNameList.Count().Equals(0))
+                // At the moment this logic does not support 'no' category association.
+                // If you require this, you will need to associate sellable-items direct to the catalog entity in Sitecore Commerce
+                if (transientData.CategoryAssociationList == null || transientData.CategoryAssociationList.Count().Equals(0))
                     throw new Exception($"{item.Name}: needs to have at least one definied Category");
 
                 var itemsCategoryList = new List<string>();
-                foreach (var CategoryName in transientData.ParentCategoryNameList)
+                foreach (var categoryAssociation in transientData.CategoryAssociationList)
                 {
-                    allCategoriesDictionary.TryGetValue(CategoryName, out Category category);
+                    var catalogContext = catalogContextList.FirstOrDefault(c => c.CatalogName.Equals(categoryAssociation.CatalogName));
+                    if (catalogContext == null) throw new Exception($"Error, catalog not found {categoryAssociation.CatalogName}. This should not happen.");
+
+                    // Find category
+                    catalogContext.CategoriesByName.TryGetValue(categoryAssociation.CategoryName, out Category category);
                     if (category != null)
                     {
+                        // Found category
                         itemsCategoryList.Add(category.SitecoreId);
+                        transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
                     }
                     else
                     {
-                        commerceContext.Logger.LogWarning($"Warning, Product with id {item.ProductId} attempting import into category {CategoryName} which doesn't exist.");
+                        commerceContext.Logger.LogWarning($"Warning, Product with id {item.ProductId} attempting import into category {categoryAssociation.CategoryName} which doesn't exist.");
                     }
                 }
 
@@ -199,7 +222,7 @@ namespace Feature.Catalog.Engine
             }
         }
 
-        private async Task TransformImages(CommerceContext commerceContext, List<TransientImportDataPolicy> transientDataList, List<SellableItem> importItems)
+        private async Task TransformImages(CommerceContext commerceContext, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
         {
             var listOfImageNames = transientDataList.SelectMany(d => d.ImageNameList).ToList().Distinct();
             var imageNameDictionary = await Command<GetMediaItemsCommand>().Process(commerceContext, listOfImageNames);
@@ -212,28 +235,19 @@ namespace Feature.Catalog.Engine
 
             foreach (var item in importItems)
             {
-                var transientData = item.GetPolicy<TransientImportDataPolicy>();
+                var transientData = item.GetPolicy<TransientImportSellableItemDataPolicy>();
 
                 if (transientData.ImageNameList == null || transientData.ImageNameList.Count().Equals(0))
                     continue;
 
                 var imageComponent = new ImagesComponent();
-                foreach(var imageName in transientData.ImageNameList)
+                foreach (var imageName in transientData.ImageNameList)
                 {
                     imageNameDictionary.TryGetValue(imageName, out string imageId);
                     if (!string.IsNullOrEmpty(imageId)) imageComponent.Images.Add(imageId);
                 }
 
                 item.Components.Add(imageComponent);
-            }
-        }
-
-        private void RemoveTransientData(List<SellableItem> importItems)
-        {
-            foreach (var item in importItems)
-            {
-                if (item.HasPolicy<TransientImportDataPolicy>())
-                    item.RemovePolicy(typeof(TransientImportDataPolicy));
             }
         }
     }

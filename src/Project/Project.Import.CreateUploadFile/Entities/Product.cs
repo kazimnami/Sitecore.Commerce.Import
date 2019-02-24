@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Project.Import.CreateUploadFile.Entities
+namespace Project.Import.CreateUploadFile
 {
     public class Product
     {

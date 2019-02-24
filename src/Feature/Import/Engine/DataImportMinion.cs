@@ -38,7 +38,7 @@ namespace Feature.Import.Engine
 
             if (Interlocked.CompareExchange(ref isRunning, 1, 0) != 0)
             {
-                minion.Logger.LogInformation($"{minion.Name} - Skipping execution");
+                //minion.Logger.LogInformation($"{minion.Name} - Skipping execution");
                 return new MinionRunResultsModel();
             }
 

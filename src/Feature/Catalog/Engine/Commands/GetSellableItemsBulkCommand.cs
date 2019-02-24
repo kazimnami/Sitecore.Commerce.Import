@@ -21,7 +21,7 @@ namespace Feature.Catalog.Engine
                     var findEntityArgument = new FindEntityArgument(typeof(SellableItem), item.ProductId.EnsurePrefix(CommerceEntity.IdPrefix<SellableItem>()), false);
 
                     // No bulk API exists in core platform, under the hood it's reading one at a time.
-                    // I've layed out the import in this manner so you can test how longe each piece takes
+                    // I've layed out the import in this manner so you can test how long each piece takes
                     // An option you have is to do a select directly against the DB, for all items in this batch 
                     // to see if you need to make this call.
                     var commerceEntity = await Pipeline<IFindEntityPipeline>().Run(findEntityArgument, commerceContext.GetPipelineContextOptions()) as SellableItem;
