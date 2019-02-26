@@ -1,28 +1,29 @@
 ﻿using Sitecore.Commerce.Plugin.Catalog;
-using System;
 
 namespace Feature.Catalog.Engine
 {
     public class ParentAssociationModel
     {
-        public string CatalogId { get; }
-        public string ParentId { get; }
+        public string ItemId { get; set; }
+        public string CatalogId { get; set; }
+        public string ParentId { get; set; }
+        public string ParentSitecoreId { get; set; }
 
-        private CatalogItemBase parent;
+        public ParentAssociationModel() { }
 
-        public string ParentSitecoreId { get { return parent != null ? parent.SitecoreId : throw new Exception("Error, parent property is null"); } }
-
-        public ParentAssociationModel(string catalogId, CatalogItemBase parent)
+        public ParentAssociationModel(string itemId, string catalogId, CatalogItemBase parent)
         {
-            this.CatalogId = catalogId;
-            this.ParentId = parent.Id;
-            this.parent = parent;
+            ItemId = itemId;
+            CatalogId = catalogId;
+            ParentId = parent.Id;
+            ParentSitecoreId = parent.SitecoreId;
         }
 
-        public ParentAssociationModel(string catalogId, string parentId)
+        public ParentAssociationModel(string itemId, string catalogId, string parentId)
         {
-            this.CatalogId = catalogId;
-            this.ParentId = parentId;
+            ItemId = itemId;
+            CatalogId = catalogId;
+            ParentId = parentId;
         }
     }
 }

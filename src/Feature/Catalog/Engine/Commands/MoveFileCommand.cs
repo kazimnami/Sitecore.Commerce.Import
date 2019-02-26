@@ -22,7 +22,8 @@ namespace Feature.Catalog.Engine
 
                 var file = new FileInfo(filePath);
                 //string destinationFilePath = Path.Combine(this.HostingEnvironment.WebRootPath, directoryPath, file.Name);
-                string destinationFilePath = Path.Combine(@"c:\Import\Archive", file.Name);
+                directoryPath = @"c:\Import\Archive"; 
+                string destinationFilePath = Path.Combine(directoryPath, file.Name);
 
                 var directoryInfo = Directory.CreateDirectory(directoryPath);
 

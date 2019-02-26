@@ -34,9 +34,13 @@ namespace Feature.Catalog.Engine
         private const int DimensionsHeightHoodClosedIndex = 16;
         private const int DimensionsWidthIndex = 17;
         private const int DimensionsDepthIndex = 18;
+        // Limit
+        private const int ExpectedIndexLimit = 19;
         // List Price
         private const int ListPriceCurrencyCodeIndex = 0;
         private const int ListPriceAmountIndex = 1;
+
+
 
         public TransformImportToSellableItemsCommand(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
@@ -49,16 +53,22 @@ namespace Feature.Catalog.Engine
                 var transientDataList = new List<TransientImportSellableItemDataPolicy>();
                 foreach (var rawFields in importRawLines)
                 {
+                    if (rawFields.Count() != ExpectedIndexLimit)
+                    {
+                        commerceContext.Logger.LogWarning($"Warning, skipping unexpected line with field count'{rawFields.Count()}' and expected '{ExpectedIndexLimit}'. Line '{string.Join(",", rawFields)}'");
+                        continue;
+                    }
+
                     var item = new SellableItem();
                     TransformCore(commerceContext, rawFields, item);
-                    TransformListPrice(importPolicy, rawFields, item);
+                    TransformListPrice(commerceContext, importPolicy, rawFields, item);
                     TransformProductExtension(rawFields, item);
                     TransformTransientData(importPolicy, rawFields, item, transientDataList);
                     importItems.Add(item);
                 }
 
-                await TransformCatalog(commerceContext, transientDataList, importItems);
-                await TransformCategory(commerceContext, importPolicy, transientDataList, importItems);
+                await TransformCatalog(commerceContext, importItems);
+                await TransformCategory(commerceContext, transientDataList, importItems);
                 await TransformImages(commerceContext, transientDataList, importItems);
 
                 return importItems;
@@ -68,7 +78,7 @@ namespace Feature.Catalog.Engine
         private void TransformCore(CommerceContext commerceContext, string[] rawFields, SellableItem item)
         {
             item.ProductId = rawFields[ProductIdIndex];
-            item.Id = $"{CommerceEntity.IdPrefix<SellableItem>()}{item.ProductId}";
+            item.Id = item.ProductId.ToEntityId<SellableItem>();
             item.FriendlyId = item.ProductId;
             item.Name = rawFields[ProductNameIndex];
             /// Be sure not to include SitecoreId in <see cref="ProductExtensionComponentComparer"/> 
@@ -86,19 +96,32 @@ namespace Feature.Catalog.Engine
             component.Memberships.Add(commerceContext.GetPolicy<KnownCatalogListsPolicy>().CatalogItems);
         }
 
-        private void TransformListPrice(ImportSellableItemsPolicy importPolicy, string[] rawFields, SellableItem item)
+        private void TransformListPrice(CommerceContext commerceContext, ImportSellableItemsPolicy importPolicy, string[] rawFields, SellableItem item)
         {
-            var listPrices = rawFields[ListPriceIndex].Split(new string[] { importPolicy.FileRecordSeparator }, new StringSplitOptions());
+            var listPrices = rawFields[ListPriceIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.RemoveEmptyEntries);
+            if (listPrices == null || listPrices.Count() == 0)
+            {
+                commerceContext.Logger.LogWarning($"Warning, Product with id '{item.ProductId}' does not contain a list price. Has value '{rawFields[ListPriceIndex]}'");
+                return;
+            }
+
             var priceList = new List<Money>();
             foreach (var listPrice in listPrices)
             {
-                var priceData = listPrice.Split('-');
+                var priceData = listPrice.Split(new char[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+                if (priceData.Count() != 2)
+                {
+                    commerceContext.Logger.LogWarning($"Warning, Product with id '{item.ProductId}' does not contain a list price. Has value '{rawFields[ListPriceIndex]}'");
+                    continue;
+                }
                 priceList.Add(new Money
                 {
                     CurrencyCode = priceData[ListPriceCurrencyCodeIndex],
                     Amount = decimal.Parse(priceData[ListPriceAmountIndex])
                 });
             }
+
+            if (!priceList.Any()) return;
 
             item.Policies.Add(new ListPricingPolicy(priceList));
         }
@@ -130,22 +153,30 @@ namespace Feature.Catalog.Engine
                 data.CatalogAssociationList.Add(new CatalogAssociationModel { Name = catalogUnit });
             }
 
-            var catalogCategoryRecord = rawFields[CategoryNameIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.None).ToList();
+            var catalogCategoryRecord = rawFields[CategoryNameIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.RemoveEmptyEntries).ToList();
             foreach (var catalogCategoryUnit in catalogCategoryRecord)
             {
-                var units = catalogCategoryUnit.Split(new string[] { importPolicy.FileUnitSeparator }, StringSplitOptions.None);
+                var units = catalogCategoryUnit.Split(new string[] { importPolicy.FileUnitSeparator }, StringSplitOptions.RemoveEmptyEntries);
                 if (units == null || units.Count() != 2) throw new Exception("Error, unexpected value in CategoryNameIndex");
                 data.CategoryAssociationList.Add(new CategoryAssociationModel { CatalogName = units[0], CategoryName = units[1] });
+            }
+
+            // Determine if sellable-item should be associated to catalog directly
+            foreach (var catalogAssoication in data.CatalogAssociationList)
+            {
+                if (!data.CategoryAssociationList.Any(c => c.CatalogName.Equals(catalogAssoication.Name)))
+                {
+                    catalogAssoication.IsParent = true;
+                }
             }
 
             item.Policies.Add(data);
             transientDataList.Add(data);
         }
 
-        private async Task TransformCatalog(CommerceContext commerceContext, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
+        private async Task TransformCatalog(CommerceContext commerceContext, List<SellableItem> importItems)
         {
             var allCatalogs = commerceContext.GetObject<IEnumerable<Sitecore.Commerce.Plugin.Catalog.Catalog>>();
-
             if (allCatalogs == null)
             {
                 allCatalogs = await Command<GetCatalogsCommand>().Process(commerceContext);
@@ -161,17 +192,21 @@ namespace Feature.Catalog.Engine
                 if (transientData.CatalogAssociationList == null || transientData.CatalogAssociationList.Count().Equals(0))
                     throw new Exception($"{item.Name}: needs to have at least one definied catalog");
 
-                var itemsCatalogList = new List<string>();
-                var catalogsComponent = item.GetComponent<CatalogsComponent>();
+                var catalogList = new List<string>();
+                var parentCatalogList = new List<string>();
                 foreach (var catalogAssociation in transientData.CatalogAssociationList)
                 {
                     allCatalogsDictionary.TryGetValue(catalogAssociation.Name, out Sitecore.Commerce.Plugin.Catalog.Catalog catalog);
                     if (catalog != null)
                     {
-                        catalogAssociation.Id = catalog.Id;
-                        catalogAssociation.SitecoreId = catalog.SitecoreId;
-                        itemsCatalogList.Add(catalog.SitecoreId);
-                        catalogsComponent.ChildComponents.Add(new CatalogComponent { Name = catalogAssociation.Name });
+                        catalogList.Add(catalog.SitecoreId);
+                        item.GetComponent<CatalogsComponent>().ChildComponents.Add(new CatalogComponent { Name = catalogAssociation.Name });
+
+                        if (catalogAssociation.IsParent)
+                        {
+                            transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, catalog.Id, catalog));
+                            parentCatalogList.Add(catalog.SitecoreId);
+                        }
                     }
                     else
                     {
@@ -179,12 +214,12 @@ namespace Feature.Catalog.Engine
                     }
                 }
 
-                item.ParentCatalogList = string.Join("|", itemsCatalogList);
-                item.CatalogToEntityList = item.ParentCatalogList;
+                item.CatalogToEntityList = catalogList.Any() ? string.Join("|", catalogList) : null;
+                item.ParentCatalogList = parentCatalogList.Any() ? string.Join("|", parentCatalogList) : null;
             }
         }
 
-        private async Task TransformCategory(CommerceContext commerceContext, ImportSellableItemsPolicy importPolicy, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
+        private async Task TransformCategory(CommerceContext commerceContext, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
         {
             var catalogNameList = transientDataList.SelectMany(d => d.CatalogAssociationList).Select(a => a.Name).Distinct();
             var catalogContextList = await Command<GetCatalogContextCommand>().Process(commerceContext, catalogNameList);
@@ -192,11 +227,6 @@ namespace Feature.Catalog.Engine
             foreach (var item in importItems)
             {
                 var transientData = item.GetPolicy<TransientImportSellableItemDataPolicy>();
-
-                // At the moment this logic does not support 'no' category association.
-                // If you require this, you will need to associate sellable-items direct to the catalog entity in Sitecore Commerce
-                if (transientData.CategoryAssociationList == null || transientData.CategoryAssociationList.Count().Equals(0))
-                    throw new Exception($"{item.Name}: needs to have at least one definied Category");
 
                 var itemsCategoryList = new List<string>();
                 foreach (var categoryAssociation in transientData.CategoryAssociationList)
@@ -210,7 +240,7 @@ namespace Feature.Catalog.Engine
                     {
                         // Found category
                         itemsCategoryList.Add(category.SitecoreId);
-                        transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
+                        transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
                     }
                     else
                     {
@@ -218,7 +248,7 @@ namespace Feature.Catalog.Engine
                     }
                 }
 
-                item.ParentCategoryList = string.Join("|", itemsCategoryList);
+                item.ParentCategoryList = itemsCategoryList.Any() ? string.Join("|", itemsCategoryList) : null;
             }
         }
 

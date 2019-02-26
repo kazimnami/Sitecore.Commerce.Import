@@ -67,7 +67,7 @@ namespace Feature.Catalog.Engine
                             importRawLines.Add(reader.ReadLine().Split(new string[] { importPolicy.FileGroupSeparator }, new StringSplitOptions()));
                         }
 
-                        var importItems = CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
+                        var importItems = await CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
 
 
                         // TODO: var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
@@ -77,20 +77,21 @@ namespace Feature.Catalog.Engine
 
                         // TODO: await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
 
-                        await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, importItems);
-                        // TODO: await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems);
-                        await CommerceCommander.Command<AssociateCategoryToParentBulkCommand>().Process(context.CommerceContext, importItems);
-                        // TODO: complete this command
-                        // TODO: await CommerceCommander.Command<DisassociateSellableItemToParentBulkCommand>().Process(context.CommerceContext, importItems));
+                        var associationsToCreate = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToCreateList).ToList();
+                        var associationsToRemove = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToRemoveList).ToList();
 
-                        //RemoveTransientData(importItems);
+                        RemoveTransientData(importItems);
+
+                        await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, importItems);
+                        await CommerceCommander.Command<AssociateToParentBulkCommand>().Process(context.CommerceContext, associationsToCreate);
+                        // TODO: complete this command
+                        await CommerceCommander.Command<DisassociateToParentBulkCommand>().Process(context.CommerceContext, associationsToRemove); 
 
                         await Task.Delay(importPolicy.SleepBetweenBatches);
                     }
                 }
 
-                // TODO: uncomment
-                //CommerceCommander.Command<MoveFileCommand>().Process(context.CommerceContext, importPolicy.FileArchiveFolderPath, filePath);
+                CommerceCommander.Command<MoveFileCommand>().Process(context.CommerceContext, importPolicy.FileArchiveFolderPath, filePath);
             }
             catch (Exception ex)
             {
@@ -105,12 +106,12 @@ namespace Feature.Catalog.Engine
             return null;
         }
 
-        private void RemoveTransientData(IEnumerable<SellableItem> importItems)
+        private void RemoveTransientData(IEnumerable<Category> importItems)
         {
             foreach (var item in importItems)
             {
-                if (item.HasPolicy<TransientImportSellableItemDataPolicy>())
-                    item.RemovePolicy(typeof(TransientImportSellableItemDataPolicy));
+                if (item.HasPolicy<TransientImportCategoryDataPolicy>())
+                    item.RemovePolicy(typeof(TransientImportCategoryDataPolicy));
             }
         }
     }

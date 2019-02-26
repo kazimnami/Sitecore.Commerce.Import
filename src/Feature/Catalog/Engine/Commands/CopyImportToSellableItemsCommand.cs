@@ -18,7 +18,9 @@ namespace Feature.Catalog.Engine
         {
             using (CommandActivity.Start(commerceContext, this))
             {
-                var catalogNameList = changedItems.Select(i => i.GetPolicy<TransientImportSellableItemDataPolicy>()).SelectMany(d => d.CatalogAssociationList).Select(a => a.Name).Distinct();
+                if (!changedItems.Any()) return;
+
+                var catalogNameList = changedItems.SelectMany(i => i.GetComponent<CatalogsComponent>().ChildComponents).Select(c => c.Name).Distinct().ToList();
                 var catalogContextList = await Command<GetCatalogContextCommand>().Process(commerceContext, catalogNameList);
 
                 foreach (var item in changedItems)
@@ -67,8 +69,8 @@ namespace Feature.Catalog.Engine
 
         private async Task CopyCategory(CommerceContext commerceContext, IEnumerable<CatalogContextModel> catalogContextList, SellableItem itemNewData, SellableItem item)
         {
-            var existingCategoryList = item.ParentCategoryList.Split('|');
-            var newCategoryList = itemNewData.ParentCategoryList.Split('|');
+            var existingCategoryList = string.IsNullOrEmpty(item.ParentCategoryList) ? new string[0] : item.ParentCategoryList.Split('|');
+            var newCategoryList = string.IsNullOrEmpty(itemNewData.ParentCategoryList) ? new string[0] : itemNewData.ParentCategoryList.Split('|');
 
             var associationsToCreate = newCategoryList.Except(existingCategoryList).ToList();
             var associationsToRemove = existingCategoryList.Except(newCategoryList).ToList();
@@ -118,7 +120,7 @@ namespace Feature.Catalog.Engine
 
                     if (category != null)
                     {
-                        transientData.ParentAssociationsToRemoveList.Add(new ParentAssociationModel(catalogContext.Catalog.Id, category));
+                        transientData.ParentAssociationsToRemoveList.Add(new ParentAssociationModel(existingItem.Id, catalogContext.Catalog.Id, category));
 
                         found = true;
                         break;

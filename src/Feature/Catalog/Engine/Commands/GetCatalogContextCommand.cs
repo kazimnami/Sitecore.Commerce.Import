@@ -13,11 +13,16 @@ namespace Feature.Catalog.Engine
     {
         public GetCatalogContextCommand(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
-        public async Task<IEnumerable<CatalogContextModel>> Process(CommerceContext commerceContext, IEnumerable<string> catalogNameList)
+        public async Task<IEnumerable<CatalogContextModel>> Process(CommerceContext commerceContext, IEnumerable<string> catalogNameList, bool useCache = true)
         {
             using (CommandActivity.Start(commerceContext, this))
             {
                 if (catalogNameList == null || catalogNameList.Count().Equals(0)) throw new Exception($"{nameof(GetCatalogContextCommand)} no catalogs provided");
+
+                if(useCache == false)
+                {
+                    commerceContext.RemoveObjects<CatalogContextModel>();
+                }
 
                 var allCatalogs = commerceContext.GetObject<IEnumerable<Sitecore.Commerce.Plugin.Catalog.Catalog>>();
                 if (allCatalogs == null)

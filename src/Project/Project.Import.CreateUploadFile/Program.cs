@@ -159,7 +159,8 @@ namespace Project.Import.CreateUploadFile
                 var web = new HtmlWeb();
                 var doc = web.Load(url);
 
-                product.Price = doc.DocumentNode.SelectSingleNode("//span[@class='price']").InnerHtml;
+                product.Price = doc.DocumentNode.SelectSingleNode("//span[@class='price']")?.InnerHtml;
+                if (product.Price == null) return;
                 product.Price = product.Price.Remove(0, product.Price.LastIndexOf('>') + 1).Replace(",", "").TrimEnd();
 
                 var imageNodeList = doc.DocumentNode.SelectNodes("//div[starts-with(@class, 'main-image-set')]/div/img");
@@ -168,6 +169,8 @@ namespace Project.Import.CreateUploadFile
                     product.ImageUrlList.Add(imageNode.Attributes["src"].Value);
                 }
             }
+
+            productList.Values.Where(p => p.Price == null).ToList().ForEach(c => productList.Remove(c.Id));
         }
 
         private static void GetImages(Dictionary<string, Product> productList)
@@ -256,7 +259,7 @@ namespace Project.Import.CreateUploadFile
                     line.Append(string.Join('|', product.ImageNameList) + ",");//"Images", // 9
                     line.Append(CatalogName + ",");//"CatalogName", // 10
                     product.CategoryIdList.ForEach(c => line.Append(string.Join("^^", $"{CatalogName}^-{c}"))); //"CategoryName", // 11
-                    line.Append(", ");//"CategoryName", // 11
+                    line.Append(",");//"CategoryName", // 11
                     line.Append(",");//"Style", // 12
                     line.Append(",");//"FuelType", // 13
                     line.Append(",");//"NaturalGasConversionAvailable", // 14

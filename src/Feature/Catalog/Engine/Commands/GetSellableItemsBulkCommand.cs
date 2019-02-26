@@ -18,7 +18,7 @@ namespace Feature.Catalog.Engine
                 var returnedItems = new List<SellableItem>();
                 foreach (var item in items)
                 {
-                    var findEntityArgument = new FindEntityArgument(typeof(SellableItem), item.ProductId.EnsurePrefix(CommerceEntity.IdPrefix<SellableItem>()), false);
+                    var findEntityArgument = new FindEntityArgument(typeof(SellableItem), item.Id, false);
 
                     // No bulk API exists in core platform, under the hood it's reading one at a time.
                     // I've layed out the import in this manner so you can test how long each piece takes
