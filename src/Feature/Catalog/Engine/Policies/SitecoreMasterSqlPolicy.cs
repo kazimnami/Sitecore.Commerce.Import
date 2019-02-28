@@ -6,7 +6,7 @@ namespace Feature.Catalog.Engine
     {
         public SitecoreMasterSqlPolicy()
         {
-            Database = "sc902_Master";
+            Database = "habitathome_Master";
         }
     }
 }

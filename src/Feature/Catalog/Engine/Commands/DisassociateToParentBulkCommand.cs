@@ -19,6 +19,9 @@ namespace Feature.Catalog.Engine
                 // TODO: draw insperation from Sitecore.Commerce.Plugin.Catalog.DoActionDisassociateBlock
                 foreach (var association in associationList)
                 {
+                    // Need to clear message as any prior error will cause all transactions to abort.
+                    commerceContext.ClearMessages();
+
                     await PerformTransaction(commerceContext, async () =>
                     {
                         var relationshipType = Command<GetRelationshipTypeCommand>().Process(commerceContext, association.ParentId, association.ItemId);

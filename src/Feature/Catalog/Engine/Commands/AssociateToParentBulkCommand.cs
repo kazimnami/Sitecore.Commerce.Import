@@ -1,4 +1,5 @@
-﻿using Sitecore.Commerce.Core;
+﻿using Microsoft.Extensions.Logging;
+using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Core.Commands;
 using Sitecore.Commerce.Plugin.Catalog;
 using System;
@@ -15,12 +16,21 @@ namespace Feature.Catalog.Engine
         {
             using (CommandActivity.Start(commerceContext, this))
             {
+                commerceContext.Logger.LogInformation($"Called - {nameof(AssociateToParentBulkCommand)}.");
+
                 foreach (var association in associationList)
                 {
-                    commerceContext.ClearModels();
-                    var relationshipType = Command<GetRelationshipTypeCommand>().Process(commerceContext, association.ParentId, association.ItemId);
-                    await Command<CreateRelationshipCommand>().Process(commerceContext, association.ParentId, association.ItemId, relationshipType);
+                    // Need to clear message as any prior error will cause all transactions to abort.
+                    commerceContext.ClearMessages();
+
+                    await PerformTransaction(commerceContext, async () =>
+                    {
+                        var relationshipType = Command<GetRelationshipTypeCommand>().Process(commerceContext, association.ParentId, association.ItemId);
+                        await Command<CreateRelationshipCommand>().Process(commerceContext, association.ParentId, association.ItemId, relationshipType);
+                    });
                 }
+
+                commerceContext.Logger.LogInformation($"Completed - {nameof(AssociateToParentBulkCommand)}.");
 
                 return true;
             }

@@ -14,13 +14,14 @@ namespace Project.Import.CreateUploadFile
         public List<string> ImageUrlList { get; set; } = new List<string>();
         public List<string> ImageNameList { get; set; } = new List<string>();
         public List<string> CategoryIdList { get; set; } = new List<string>();
+        public List<string> FoundOnPageList { get; set; } = new List<string>();
 
         public override string ToString()
         {
             return $"PRODUCT: Id:{Id}";
         }
 
-        public static Product AddUpdate(Dictionary<string, Product> list, Category category, string id, string displayName, HtmlAttribute url)
+        public static Product AddUpdate(Dictionary<string, Product> list, Category category, string id, string displayName, HtmlAttribute url, string foundOnPage)
         {
             Product item = null;
 
@@ -48,6 +49,7 @@ namespace Project.Import.CreateUploadFile
 
             item.CategoryIdList.Add(category.Id);
             category.ProductIdList.Add(item.Id);
+            item.FoundOnPageList.Add(foundOnPage);
 
             return item;
         }

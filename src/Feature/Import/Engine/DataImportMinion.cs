@@ -49,6 +49,8 @@ namespace Feature.Import.Engine
                 var commerceContext = new CommerceContext(minion.Logger, minion.MinionContext.TelemetryClient, null) { Environment = minion.Environment };
                 await CommerceCommander.Pipeline<IImportDataPipeline>().Run(null, commerceContext.GetPipelineContextOptions());
 
+                minion.Logger.LogInformation($"{minion.Name} - Finished");
+
                 return new MinionRunResultsModel();
             }
             catch (Exception ex)

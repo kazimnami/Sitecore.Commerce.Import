@@ -22,6 +22,7 @@ namespace Project.Import.CreateUploadFile
                 GetCategoryToProductAssociation(categoryList, productList);
                 //GetCategories();
                 GetProducts(productList);
+                CleanProductCategories(productList);
                 GetImages(productList);
                 CreateFile(productList);
                 CreateFile(categoryList);
@@ -79,7 +80,7 @@ namespace Project.Import.CreateUploadFile
                 var productUrl = node.Attributes["href"];
                 var displayName = node.Attributes["title"].Value;
 
-                Product.AddUpdate(productList, category, productId, displayName, productUrl);
+                Product.AddUpdate(productList, category, productId, displayName, productUrl, url);
             }
 
             var pagerNodeList = doc.DocumentNode.SelectNodes("//div[@class='pages']/ol/li");
@@ -160,7 +161,8 @@ namespace Project.Import.CreateUploadFile
                 var doc = web.Load(url);
 
                 product.Price = doc.DocumentNode.SelectSingleNode("//span[@class='price']")?.InnerHtml;
-                if (product.Price == null) return;
+                if (product.Price == null)
+                    return;
                 product.Price = product.Price.Remove(0, product.Price.LastIndexOf('>') + 1).Replace(",", "").TrimEnd();
 
                 var imageNodeList = doc.DocumentNode.SelectNodes("//div[starts-with(@class, 'main-image-set')]/div/img");
@@ -171,6 +173,23 @@ namespace Project.Import.CreateUploadFile
             }
 
             productList.Values.Where(p => p.Price == null).ToList().ForEach(c => productList.Remove(c.Id));
+        }
+
+        private static void CleanProductCategories(Dictionary<string, Product> productList)
+        {
+            // Comment or uncomment this method depending if you want to a product to only be contained in the end leaves of the category tree.
+            foreach (var product in productList.Values)
+            {
+                var removeList = new List<string>();
+                foreach (var category in product.CategoryIdList)
+                {
+                    if (product.CategoryIdList.Any(c => c != category && c.StartsWith(category)))
+                    {
+                        removeList.Add(category);
+                    }
+                }
+                product.CategoryIdList = product.CategoryIdList.Except(removeList).ToList();
+            }
         }
 
         private static void GetImages(Dictionary<string, Product> productList)
@@ -247,10 +266,10 @@ namespace Project.Import.CreateUploadFile
                 foreach (var product in productList.Values)
                 {
                     line.Clear();
-                    line.Append(product.Id + ","); //"ProductId", // 0
-                    line.Append(product.DisplayName + ","); //"ProductName", // 1
-                    line.Append(product.DisplayName + ",");//"DisplayName", // 2
-                    line.Append(product.Description + ","); //"Description", // 3
+                    line.Append(CatalogName + product.Id + ","); //"ProductId", // 0
+                    line.Append(product.DisplayName?.StringToCSVCell() + ","); //"ProductName", // 1
+                    line.Append(product.DisplayName?.StringToCSVCell() + ",");//"DisplayName", // 2
+                    line.Append(product.Description?.StringToCSVCell() + ","); //"Description", // 3
                     line.Append(",");//"Brand", // 4
                     line.Append(",");//"Manufacturer", // 5
                     line.Append(",");//"TypeOfGood", // 6
