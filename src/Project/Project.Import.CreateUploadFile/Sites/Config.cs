@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 
-namespace Project.Import.CreateUploadFile.Sites.BBQG
+namespace Project.Import.CreateUploadFile.Sites
 {
-    public static class Config
+    public abstract class Config
     {
-        public static readonly string Url = "aHR0cHM6Ly93d3cuYmFyYmVxdWVzZ2Fsb3JlLmNvbS5hdS8=";
+        public string Url { get; set; }
+        public string CatalogName { get; set; }
+        public string DirectoryLocation { get; set; } = @"c:\Import\Images";
 
         public static string Set(string input)
         {
