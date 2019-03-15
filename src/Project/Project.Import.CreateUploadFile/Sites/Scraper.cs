@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Project.Import.CreateUploadFile.Sites
@@ -11,7 +12,7 @@ namespace Project.Import.CreateUploadFile.Sites
         public abstract void GetProducts(Config config, Dictionary<string, Product> productList);
         public abstract void GetImages(Config config, Dictionary<string, Product> productList);
 
-        private static void CleanProductCategories(Dictionary<string, Product> productList)
+        public void CleanProductCategories(Dictionary<string, Product> productList)
         {
             // Comment or uncomment this method depending if you want to a product to only be contained in the end leaves of the category tree.
             foreach (var product in productList.Values)

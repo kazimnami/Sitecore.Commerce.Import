@@ -29,7 +29,8 @@ namespace Project.Import.CreateUploadFile
 
             var item = new Category
             {
-                Id = string.IsNullOrEmpty(parentCategoryId) ? id : $"{parentCategoryId}_{id}",
+                //Id = string.IsNullOrEmpty(parentCategoryId) ? id : $"{parentCategoryId}_{id}",
+                Id = id,
                 ParentCategoryId = parentCategoryId,
                 DisplayName = displayName,
                 Url = url != null ? url.Value : "",
