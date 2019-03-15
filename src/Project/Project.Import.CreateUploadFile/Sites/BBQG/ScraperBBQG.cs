@@ -57,7 +57,7 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
                 var productUrl = node.Attributes["href"];
                 var displayName = node.Attributes["title"].Value;
 
-                Product.AddUpdate(productList, category, productId, displayName, productUrl);
+                Product.AddUpdate(productList, category, productId, displayName, productUrl, url);
             }
 
             var pagerNodeList = doc.DocumentNode.SelectNodes("//div[@class='pages']/ol/li");

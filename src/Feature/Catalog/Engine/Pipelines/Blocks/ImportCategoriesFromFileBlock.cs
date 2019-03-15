@@ -59,6 +59,8 @@ namespace Feature.Catalog.Engine
                     // skip header
                     if (!reader.EndOfStream) reader.ReadLine();
 
+
+
                     while (!reader.EndOfStream)
                     {
                         var importRawLines = new List<string[]>();

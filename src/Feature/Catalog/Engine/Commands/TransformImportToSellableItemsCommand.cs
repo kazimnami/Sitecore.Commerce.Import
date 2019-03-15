@@ -254,7 +254,8 @@ namespace Feature.Catalog.Engine
 
         private async Task TransformImages(CommerceContext commerceContext, List<TransientImportSellableItemDataPolicy> transientDataList, List<SellableItem> importItems)
         {
-            var listOfImageNames = transientDataList.SelectMany(d => d.ImageNameList).ToList().Distinct();
+            var listOfImageNames = transientDataList.SelectMany(d => d.ImageNameList).Distinct().ToList();
+            listOfImageNames = listOfImageNames.Select(imageName => System.IO.Path.GetFileNameWithoutExtension(imageName)).ToList();
             var imageNameDictionary = await Command<GetMediaItemsCommand>().Process(commerceContext, listOfImageNames);
 
             if (imageNameDictionary.Count().Equals(0))
@@ -273,7 +274,7 @@ namespace Feature.Catalog.Engine
                 var imageComponent = new ImagesComponent();
                 foreach (var imageName in transientData.ImageNameList)
                 {
-                    imageNameDictionary.TryGetValue(imageName, out string imageId);
+                    imageNameDictionary.TryGetValue(System.IO.Path.GetFileNameWithoutExtension(imageName), out string imageId);
                     if (!string.IsNullOrEmpty(imageId)) imageComponent.Images.Add(imageId);
                 }
 

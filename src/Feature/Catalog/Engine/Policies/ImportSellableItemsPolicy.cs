@@ -12,7 +12,7 @@ namespace Feature.Catalog.Engine
         public string FileArchiveFolderPath { get; set; } = @"data\Import\Archive";
         public string FilePrefix { get; set; } = "ProductImport";
         public string FileExtention { get; set; } = "CSV";
-        public string FileGroupSeparator { get; set; } = ",";
+        public char FileGroupSeparator { get; set; } = ',';
         public string FileRecordSeparator { get; set; } = "^^";
         public string FileUnitSeparator { get; set; } = "^-";
         

@@ -79,10 +79,10 @@ namespace Project.Import.CreateUploadFile
                 foreach (var product in productList.Values)
                 {
                     line.Clear();
-                    line.Append(product.Id + ","); //"ProductId", // 0
-                    line.Append(product.DisplayName + ","); //"ProductName", // 1
-                    line.Append(product.DisplayName + ",");//"DisplayName", // 2
-                    line.Append(product.Description + ","); //"Description", // 3
+                    line.Append(config.CatalogName + product.Id + ","); //"ProductId", // 0
+                    line.Append(product.DisplayName?.StringToCSVCell() + ","); //"ProductName", // 1
+                    line.Append(product.DisplayName?.StringToCSVCell() + ",");//"DisplayName", // 2
+                    line.Append(product.Description?.StringToCSVCell() + ","); //"Description", // 3
                     line.Append(",");//"Brand", // 4
                     line.Append(",");//"Manufacturer", // 5
                     line.Append(",");//"TypeOfGood", // 6

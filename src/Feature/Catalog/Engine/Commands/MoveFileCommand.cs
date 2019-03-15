@@ -27,6 +27,7 @@ namespace Feature.Catalog.Engine
 
                 var directoryInfo = Directory.CreateDirectory(directoryPath);
 
+                File.Delete(destinationFilePath);
                 File.Move(filePath, destinationFilePath);
 
                 return null;

@@ -139,7 +139,7 @@ namespace Project.Import.CreateUploadFile.Sites
 
                 if (productId == null) continue;
                 productId = productId.Replace("0002_002_", "");
-                Product.AddUpdate(productList, category, productId, displayName, productUrl);
+                Product.AddUpdate(productList, category, productId, displayName, productUrl, url);
             }
 
             var pagerNodeList = doc.DocumentNode.SelectSingleNode("//div[@class='pagination']/a[@title='Next']");

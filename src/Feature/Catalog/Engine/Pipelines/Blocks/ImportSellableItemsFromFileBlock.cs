@@ -58,36 +58,40 @@ namespace Feature.Catalog.Engine
 
                 using (var reader = new StreamReader(filePath))
                 {
-                    // skip header
-                    if (!reader.EndOfStream) reader.ReadLine();
-
-                    while (!reader.EndOfStream)
+                    using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(reader))
                     {
-                        var importRawLines = new List<string[]>();
-                        for (int i = 0; !reader.EndOfStream || i >= importPolicy.ItemsPerBatch; i++)
+                        parser.SetDelimiter(importPolicy.FileGroupSeparator);
+                        // skip header
+                        if (!parser.EndOfData) parser.ReadFields();
+
+                        while (!parser.EndOfData)
                         {
-                            importRawLines.Add(reader.ReadLine().Split(new string[] { importPolicy.FileGroupSeparator }, StringSplitOptions.None));
+                            var importRawLines = new List<string[]>();
+                            for (int i = 0; !parser.EndOfData || i >= importPolicy.ItemsPerBatch; i++)
+                            {
+                                importRawLines.Add(parser.ReadFields());
+                            }
+
+                            var importItems = await CommerceCommander.Command<TransformImportToSellableItemsCommand>().Process(context.CommerceContext, importRawLines);
+                            var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
+
+                            var newItems = importItems.Except(existingItems, sellableItemComparerByProductId).ToList();
+                            var changedItems = existingItems.Except(importItems, sellableItemComparerByImportData).ToList();
+
+                            await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
+
+                            var associationsToCreate = importItems.SelectMany(i => i.GetPolicy<TransientImportSellableItemDataPolicy>().ParentAssociationsToCreateList).ToList();
+                            var associationsToRemove = importItems.SelectMany(i => i.GetPolicy<TransientImportSellableItemDataPolicy>().ParentAssociationsToRemoveList).ToList();
+
+                            RemoveTransientData(importItems);
+
+                            await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems));
+                            await CommerceCommander.Command<AssociateToParentBulkCommand>().Process(context.CommerceContext, associationsToCreate);
+                            // TODO: Need to test the disassociate, haven't had time yet
+                            await CommerceCommander.Command<DisassociateToParentBulkCommand>().Process(context.CommerceContext, associationsToRemove);
+
+                            await Task.Delay(importPolicy.SleepBetweenBatches);
                         }
-
-                        var importItems = await CommerceCommander.Command<TransformImportToSellableItemsCommand>().Process(context.CommerceContext, importRawLines);
-                        var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
-
-                        var newItems = importItems.Except(existingItems, sellableItemComparerByProductId).ToList();
-                        var changedItems = existingItems.Except(importItems, sellableItemComparerByImportData).ToList();
-
-                        await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
-
-                        var associationsToCreate = importItems.SelectMany(i => i.GetPolicy<TransientImportSellableItemDataPolicy>().ParentAssociationsToCreateList).ToList();
-                        var associationsToRemove = importItems.SelectMany(i => i.GetPolicy<TransientImportSellableItemDataPolicy>().ParentAssociationsToRemoveList).ToList();
-
-                        RemoveTransientData(importItems);
-
-                        await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems));
-                        await CommerceCommander.Command<AssociateToParentBulkCommand>().Process(context.CommerceContext, associationsToCreate);
-                        // TODO: Need to test the disassociate, haven't had time yet
-                        await CommerceCommander.Command<DisassociateToParentBulkCommand>().Process(context.CommerceContext, associationsToRemove);
-
-                        await Task.Delay(importPolicy.SleepBetweenBatches);
                     }
                 }
 
