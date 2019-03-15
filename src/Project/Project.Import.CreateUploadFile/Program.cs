@@ -25,6 +25,7 @@ namespace Project.Import.CreateUploadFile
                 scraper.GetCategoryToProductAssociation(config, categoryList, productList);
                 //scraper.GetCategories();
                 scraper.GetProducts(config, productList);
+                scraper.CleanProductCategories(productList);
                 scraper.GetImages(config, productList);
 
                 CreateFile(config, productList);
