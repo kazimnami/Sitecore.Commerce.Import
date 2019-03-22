@@ -67,7 +67,7 @@ namespace Feature.Catalog.Engine
                         while (!parser.EndOfData)
                         {
                             var importRawLines = new List<string[]>();
-                            for (int i = 0; !parser.EndOfData || i >= importPolicy.ItemsPerBatch; i++)
+                            for (int i = 0; !parser.EndOfData && i <= importPolicy.ItemsPerBatch - 1; i++)
                             {
                                 importRawLines.Add(parser.ReadFields());
                             }

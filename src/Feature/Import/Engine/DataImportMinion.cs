@@ -10,8 +10,6 @@ namespace Feature.Import.Engine
 {
     public class DataImportMinion : Minion
     {
-        private static int isRunning = 0;
-
         private CommerceCommander CommerceCommander { get; set; }
 
         public override void Initialize(IServiceProvider serviceProvider, ILogger logger, MinionPolicy policy, CommerceEnvironment environment, CommerceContext globalContext)
@@ -32,24 +30,17 @@ namespace Feature.Import.Engine
             Logger.LogInformation(log.ToString());
         }
 
-        public override async Task<MinionRunResultsModel> Run()
+        protected override async Task<MinionRunResultsModel> Execute()
         {
-            var minion = this;
-
-            if (Interlocked.CompareExchange(ref isRunning, 1, 0) != 0)
-            {
-                //minion.Logger.LogInformation($"{minion.Name} - Skipping execution");
-                return new MinionRunResultsModel();
-            }
-
             try
             {
-                minion.Logger.LogInformation($"{minion.Name} - Starting");
+                this.Logger.LogInformation($"{this.Name} - Starting");
 
-                var commerceContext = new CommerceContext(minion.Logger, minion.MinionContext.TelemetryClient, null) { Environment = minion.Environment };
-                await CommerceCommander.Pipeline<IImportDataPipeline>().Run(null, commerceContext.GetPipelineContextOptions());
+                var commerceContext = new CommerceContext(this.Logger, this.MinionContext.TelemetryClient, null) { Environment = this.Environment };
+                commerceContext.GetPolicy<AutoApprovePolicy>();
+                await CommerceCommander.Pipeline<IImportDataPipeline>().Run(null, commerceContext.PipelineContextOptions);
 
-                minion.Logger.LogInformation($"{minion.Name} - Finished");
+                this.Logger.LogInformation($"{this.Name} - Finished");
 
                 return new MinionRunResultsModel();
             }
@@ -58,10 +49,11 @@ namespace Feature.Import.Engine
                 Logger.LogError($"{Name}-Error occured: {ex.Message}", ex);
                 throw;
             }
-            finally
-            {
-                isRunning = 0;
-            }
+        }
+
+        public override Task<MinionRunResultsModel> Run()
+        {
+            throw new NotImplementedException();
         }
     }
 }

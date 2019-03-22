@@ -29,11 +29,10 @@ namespace Feature.Catalog.Engine
                 {
                     c.Add<DoActionEditBlock>().After<ValidateEntityVersionBlock>();
                 })
-                .ConfigurePipeline<IPersistEntityPipeline>(c =>
-                {
-                    c.Replace<Sitecore.Commerce.Plugin.SQL.PersistEntityBlock, Pipelines.Blocks.PersistEntityBlock>();
-                }
-                )
+                //.ConfigurePipeline<IPersistEntityPipeline>(c =>
+                //{
+                //    c.Replace<Sitecore.Commerce.Plugin.SQL.PersistEntityBlock, Pipelines.Blocks.PersistEntityBlock>();
+                //})
             );
         }
     }

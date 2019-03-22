@@ -24,7 +24,7 @@ namespace Feature.Catalog.Engine
             {
 
                 var mediaItemList = new Dictionary<string, string>();
-                var connectionString = commerceContext.GetPolicy<SitecoreMasterSqlPolicy>().ReadOnlyConnectionString(commerceContext);
+                var connectionString = commerceContext.GetPolicy<SitecoreMasterSqlPolicy>().ReadOnlyConnectionString();
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {

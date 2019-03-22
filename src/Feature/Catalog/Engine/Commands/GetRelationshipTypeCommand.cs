@@ -17,13 +17,13 @@ namespace Feature.Catalog.Engine
             {
                 if (parentId.StartsWith(CommerceEntity.IdPrefix<Sitecore.Commerce.Plugin.Catalog.Catalog>()))
                 {
-                    if (itemId.StartsWith(CommerceEntity.IdPrefix<SellableItem>())) return CatalogConstants.Relationships.CatalogToSellableItem;
-                    else if (itemId.StartsWith(CommerceEntity.IdPrefix<Category>())) return CatalogConstants.Relationships.CatalogToCategory;
+                    if (itemId.StartsWith(CommerceEntity.IdPrefix<SellableItem>())) return CatalogConstants.CatalogToSellableItem;
+                    else if (itemId.StartsWith(CommerceEntity.IdPrefix<Category>())) return CatalogConstants.CatalogToCategory;
                 }
                 else if (parentId.StartsWith(CommerceEntity.IdPrefix<Category>()))
                 {
-                    if (itemId.StartsWith(CommerceEntity.IdPrefix<SellableItem>())) return CatalogConstants.Relationships.CategoryToSellableItem;
-                    else if (itemId.StartsWith(CommerceEntity.IdPrefix<Category>())) return CatalogConstants.Relationships.CategoryToCategory;
+                    if (itemId.StartsWith(CommerceEntity.IdPrefix<SellableItem>())) return CatalogConstants.CategoryToSellableItem;
+                    else if (itemId.StartsWith(CommerceEntity.IdPrefix<Category>())) return CatalogConstants.CategoryToCategory;
                 }
                 throw new Exception($"Error, can not determine relationship type between ItemId '{itemId}' and ParentId '{parentId}'.");
             }
