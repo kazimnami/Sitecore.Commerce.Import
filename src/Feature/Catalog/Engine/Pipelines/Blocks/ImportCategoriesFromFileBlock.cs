@@ -42,7 +42,9 @@ namespace Feature.Catalog.Engine
         public override async Task<string> Run(string arg, CommercePipelineExecutionContext context)
         {
             var importPolicy = context.GetPolicy<ImportCategoriesPolicy>();
-            
+            var categoryComparerById = new ImportCategoryComparer(CategoryComparerConfiguration.ById);
+            var categoryComparerByData = new ImportCategoryComparer(CategoryComparerConfiguration.ByData);
+
             LogInitialization(context, importPolicy);
 
             try
@@ -68,14 +70,12 @@ namespace Feature.Catalog.Engine
                         }
 
                         var importItems = await CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
+                        var existingItems = await CommerceCommander.Command<GetCategoriesBulkCommand>().Process(context.CommerceContext, importItems);
 
+                        var newItems = importItems.Except(existingItems, categoryComparerById);
+                        var changedItems = existingItems.Except(importItems, categoryComparerByData);
 
-                        // TODO: var existingItems = await CommerceCommander.Command<GetSellableItemsBulkCommand>().Process(context.CommerceContext, importItems);
-
-                        // TODO: var newItems = importItems.Except(existingItems, sellableItemComparerByProductId);
-                        // TODO: var changedItems = existingItems.Except(importItems, sellableItemComparerByImportData);
-
-                        // TODO: await CommerceCommander.Command<CopyImportToSellableItemsCommand>().Process(context.CommerceContext, importItems, changedItems);
+                        await CommerceCommander.Command<CopyImportToCategoriesCommand>().Process(context.CommerceContext, importItems, changedItems);
 
                         var associationsToCreate = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToCreateList).ToList();
                         var associationsToRemove = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToRemoveList).ToList();
