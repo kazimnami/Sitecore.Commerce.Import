@@ -15,13 +15,16 @@ namespace Project.Import.CreateUploadFile
         public List<string> ImageNameList { get; set; } = new List<string>();
         public List<string> CategoryIdList { get; set; } = new List<string>();
         public List<string> FoundOnPageList { get; set; } = new List<string>();
+        public string Manufacturer { get; internal set; }
+        public string Brand { get; internal set; }
+        public string TypeOfGood { get; internal set; }
 
         public override string ToString()
         {
             return $"PRODUCT: Id:{Id}";
         }
 
-        public static Product AddUpdate(Dictionary<string, Product> list, Category category, string id, string displayName, HtmlAttribute url, string foundOnPage)
+        public static Product AddUpdate(Dictionary<string, Product> list, Category category, string id, string displayName, string url, string foundOnPage)
         {
             Product item = null;
 
@@ -31,7 +34,7 @@ namespace Project.Import.CreateUploadFile
                 {
                     Id = id,
                     DisplayName = System.Net.WebUtility.HtmlDecode(displayName),
-                    Url = url != null ? url.Value : "",
+                    Url = url,
                     ImageUrlList = new List<string>(),
                     CategoryIdList = new List<string>(),
                 };

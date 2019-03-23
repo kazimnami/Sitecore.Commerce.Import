@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Project.Import.CreateUploadFile.Sites
+﻿namespace Project.Import.CreateUploadFile.Sites
 {
     public class ConfigAMTF : Config
     {

@@ -18,7 +18,7 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
 
             var nav = doc.DocumentNode.SelectSingleNode("//nav[@id='nav']");
 
-            GetRootCategories(nav, categoryList);
+            GetRootCategories(config, nav, categoryList);
         }
 
         public override void GetCategoryToProductAssociation(Config config, Dictionary<string, Category> categoryList, Dictionary<string, Product> productList)
@@ -57,7 +57,7 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
                 var productUrl = node.Attributes["href"];
                 var displayName = node.Attributes["title"].Value;
 
-                Product.AddUpdate(productList, category, productId, displayName, productUrl, url);
+                Product.AddUpdate(productList, category, productId, displayName, productUrl != null ? productUrl.Value : "", url);
             }
 
             var pagerNodeList = doc.DocumentNode.SelectNodes("//div[@class='pages']/ol/li");
@@ -76,7 +76,7 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
             }
         }
 
-        private static void GetRootCategories(HtmlNode startNode, Dictionary<string, Category> categoryList)
+        private static void GetRootCategories(Config config, HtmlNode startNode, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes(".//ol/ul/li[starts-with(@class, 'level0')]");
 
@@ -87,12 +87,12 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
                 Console.WriteLine();
                 Console.WriteLine($"***************************************************************************************");
 
-                var category = Category.Add(categoryList, "", node.InnerHtml, node.Attributes["href"]);
-                GetLevel1Categories(categoryNode, category, categoryList);
+                var category = Category.Add(config, categoryList, "", node.InnerHtml, node.Attributes["href"] != null ? node.Attributes["href"].Value : "");
+                GetLevel1Categories(config, categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel1Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
+        private static void GetLevel1Categories(Config config, HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes(".//div[starts-with(@class, 'level1')]");
 
@@ -103,12 +103,12 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
 
                 if (node == null) continue;
 
-                var category = Category.Add(categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"]);
-                GetLevel2Categories(categoryNode, category, categoryList);
+                var category = Category.Add(config, categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"] != null ? node.Attributes["href"].Value : "");
+                GetLevel2Categories(config, categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel2Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
+        private static void GetLevel2Categories(Config config, HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes(".//li[starts-with(@class, 'level2')]");
 
@@ -117,7 +117,7 @@ namespace Project.Import.CreateUploadFile.Sites.BBQG
             {
                 var node = categoryNode.SelectSingleNode(".//a");
 
-                Category.Add(categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"]);
+                Category.Add(config, categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"] != null ? node.Attributes["href"].Value : "");
             }
         }
 

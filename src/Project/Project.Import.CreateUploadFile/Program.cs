@@ -13,8 +13,8 @@ namespace Project.Import.CreateUploadFile
     { 
         static void Main(string[] args)
         {
-            Config config = new ConfigAMTF();
-            Scraper scraper = new ScraperAMTF();
+            Config config = new ConfigCLRMTS();
+            Scraper scraper = new ScraperCLRMTS();
 
             try
             {
@@ -23,13 +23,14 @@ namespace Project.Import.CreateUploadFile
 
                 scraper.GetCategoryhierarchy(config, categoryList);
                 scraper.GetCategoryToProductAssociation(config, categoryList, productList);
-                //scraper.GetCategories();
+                scraper.EnsureAllCategoryParentsExist(categoryList);
+                scraper.KeepLowestLevelCategoriesForProduct(productList);
                 scraper.GetProducts(config, productList);
-                scraper.CleanProductCategories(productList);
                 scraper.GetImages(config, productList);
 
-                CreateFile(config, productList);
-                CreateFile(config, categoryList);
+                CreateFileProduct(config, productList);
+                CreateFileCategory(config, categoryList);
+                CreateFileInventory(config, productList);
             }
             catch (Exception exp)
             {
@@ -38,13 +39,13 @@ namespace Project.Import.CreateUploadFile
             }
         }
 
-        private static void CreateFile(Config config, Dictionary<string, Product> productList)
+        private static void CreateFileProduct(Config config, Dictionary<string, Product> productList)
         {
             Console.WriteLine();
             Console.WriteLine($"***************************************************************************************");
             Console.WriteLine("Creating File");
 
-            var fileName = $"ProductImport_{DateTime.Now.ToString("yyyyMMdd")}";
+            var fileName = $"ProductImport_{DateTime.Now.ToString("yyyyMMddTHHmmss")}";
             var directoryLocation = @"c:\Import";
             var filePath = Path.Combine(directoryLocation, fileName + ".csv");
             var directoryInfo = Directory.CreateDirectory(directoryLocation);
@@ -84,14 +85,14 @@ namespace Project.Import.CreateUploadFile
                     line.Append(product.DisplayName?.StringToCSVCell() + ","); //"ProductName", // 1
                     line.Append(product.DisplayName?.StringToCSVCell() + ",");//"DisplayName", // 2
                     line.Append(product.Description?.StringToCSVCell() + ","); //"Description", // 3
-                    line.Append(",");//"Brand", // 4
-                    line.Append(",");//"Manufacturer", // 5
-                    line.Append(",");//"TypeOfGood", // 6
+                    line.Append(product.Brand?.Trim() + ",");//"Brand", // 4
+                    line.Append(product.Manufacturer?.Trim() + ",");//"Manufacturer", // 5
+                    line.Append(product.TypeOfGood?.Trim() + ",");//"TypeOfGood", // 6
                     line.Append(",");//"Tags", // 7
                     line.Append("USD-" + product.Price + ",");//"ListPrice", // 8
                     line.Append(string.Join('|', product.ImageNameList) + ",");//"Images", // 9
                     line.Append(config.CatalogName + ",");//"CatalogName", // 10
-                    product.CategoryIdList.ForEach(c => line.Append(string.Join("^^", $"{config.CatalogName}^-{c}"))); //"CategoryName", // 11
+                    line.Append(string.Join("^^", product.CategoryIdList.Select(c => $"{config.CatalogName}^-{c}").ToList())); //"CategoryName", // 11
                     line.Append(",");//"CategoryName", // 11
                     line.Append(",");//"Style", // 12
                     line.Append(",");//"FuelType", // 13
@@ -108,13 +109,13 @@ namespace Project.Import.CreateUploadFile
             File.Move(filePath, Path.Combine(directoryLocation, fileName + ".CSV"));
         }
 
-        private static void CreateFile(Config config, Dictionary<string, Category> categoryList)
+        private static void CreateFileCategory(Config config, Dictionary<string, Category> categoryList)
         {
             Console.WriteLine();
             Console.WriteLine($"***************************************************************************************");
             Console.WriteLine("Creating File");
 
-            var fileName = $"CategoryImport_{DateTime.Now.ToString("yyyyMMdd")}";
+            var fileName = $"CategoryImport_{DateTime.Now.ToString("yyyyMMddTHHmmss")}";
             var directoryLocation = @"c:\Import";
             var filePath = Path.Combine(directoryLocation, fileName + ".csv");
             var directoryInfo = Directory.CreateDirectory(directoryLocation);
@@ -139,6 +140,43 @@ namespace Project.Import.CreateUploadFile
                     line.Append(category.Id + ","); //"CategoryName", // 1
                     line.Append(category.ParentCategoryId + ",");//"ParentCategoryName", // 2
                     line.Append(category.DisplayName); //"DisplayName", // 3
+
+                    file.WriteLine(line);
+                }
+            }
+
+            File.Move(filePath, Path.Combine(directoryLocation, fileName + ".CSV"));
+        }
+
+        private static void CreateFileInventory(Config config, Dictionary<string, Product> productList)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"***************************************************************************************");
+            Console.WriteLine("Creating File");
+
+            var fileName = $"InventoryImport_{DateTime.Now.ToString("yyyyMMddTHHmmss")}";
+            var directoryLocation = @"c:\Import";
+            var filePath = Path.Combine(directoryLocation, fileName + ".csv");
+            var directoryInfo = Directory.CreateDirectory(directoryLocation);
+
+            using (var file = File.CreateText(filePath))
+            {
+                var headerList = new List<string>
+                {
+                    "InventoryName", // 0
+                    "ProductName", // 1
+                    "Quantity", // 2
+                };
+
+                file.WriteLine(string.Join(',', headerList));
+
+                var line = new StringBuilder();
+                foreach (var product in productList.Values)
+                {
+                    line.Clear();
+                    line.Append(config.CatalogName + ","); //"InventoryName", // 0
+                    line.Append(product.Id + ","); //"ProductName", // 1
+                    line.Append("100"); //"Quantity", // 2
 
                     file.WriteLine(line);
                 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using Project.Import.CreateUploadFile.Sites;
 
 namespace Project.Import.CreateUploadFile
 {
@@ -20,7 +21,7 @@ namespace Project.Import.CreateUploadFile
             return $"CATEGORY: Id:{Id}, DisplayName:{DisplayName}";
         }
 
-        public static Category Add(Dictionary<string, Category> categoryList, string parentCategoryId, string displayName, HtmlAttribute url)
+        public static Category Add(Config config, Dictionary<string, Category> categoryList, string parentCategoryId, string displayName, string url)
         {
             displayName = WebUtility.HtmlDecode(displayName);
             TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
@@ -29,11 +30,10 @@ namespace Project.Import.CreateUploadFile
 
             var item = new Category
             {
-                //Id = string.IsNullOrEmpty(parentCategoryId) ? id : $"{parentCategoryId}_{id}",
-                Id = id,
+                Id = config.UseParentCategoryNameInChildren ? string.IsNullOrEmpty(parentCategoryId) ? id : $"{parentCategoryId}_{id}" : id,
                 ParentCategoryId = parentCategoryId,
                 DisplayName = displayName,
-                Url = url != null ? url.Value : "",
+                Url = url,
                 ProductIdList = new List<string>(),
             };
 

@@ -16,23 +16,10 @@ namespace Project.Import.CreateUploadFile.Sites
 
             var nav = doc.DocumentNode.SelectSingleNode("//div[@id='main_nav']");
 
-            GetRootCategories(nav, categoryList);
-            EnsureAllCategoryParentsExist(categoryList);
+            GetRootCategories(config, nav, categoryList);
         }
 
-        private void EnsureAllCategoryParentsExist(Dictionary<string, Category> categoryList)
-        {
-            foreach (var category in categoryList.Values)
-            {
-                if (string.IsNullOrEmpty(category.ParentCategoryId)) continue;
-                if (!categoryList.TryGetValue(category.ParentCategoryId, out Category found))
-                {
-                    throw new Exception("Put a break point here and fix any category parents that don't exist.");
-                }
-            }
-        }
-
-        private static void GetRootCategories(HtmlNode startNode, Dictionary<string, Category> categoryList)
+        private static void GetRootCategories(Config config, HtmlNode startNode, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes("./ul/li");
 
@@ -45,12 +32,12 @@ namespace Project.Import.CreateUploadFile.Sites
                 Console.WriteLine();
                 Console.WriteLine($"***************************************************************************************");
 
-                var category = Category.Add(categoryList, "", node.InnerHtml, node.Attributes["href"]);
-                GetLevel1Categories(categoryNode, category, categoryList);
+                var category = Category.Add(config, categoryList, "", node.InnerHtml, node.Attributes["href"] != null ? node.Attributes["href"].Value : "");
+                GetLevel1Categories(config, categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel1Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
+        private static void GetLevel1Categories(Config config, HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes("./div[starts-with(@class, 'large_dropdown')]/div/div");
 
@@ -70,22 +57,22 @@ namespace Project.Import.CreateUploadFile.Sites
                 }
 
                 if (string.IsNullOrEmpty(categoryDisplayName)) continue;
-                Category category = Category.Add(categoryList, parentCategory.Id, categoryDisplayName, categoryUrl);
+                Category category = Category.Add(config, categoryList, parentCategory.Id, categoryDisplayName, categoryUrl != null ? categoryUrl.Value : "");
                 if (category == null) continue;
 
 
-                GetLevel2Categories(categoryNode, category, categoryList);
+                GetLevel2Categories(config, categoryNode, category, categoryList);
             }
         }
 
-        private static void GetLevel2Categories(HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
+        private static void GetLevel2Categories(Config config, HtmlNode startNode, Category parentCategory, Dictionary<string, Category> categoryList)
         {
             var categoryNodeList = startNode.SelectNodes("./ul/li/a");
 
             if (categoryNodeList == null) return;
             foreach (var node in categoryNodeList)
             {
-                Category.Add(categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"]);
+                Category.Add(config, categoryList, parentCategory.Id, node.InnerHtml, node.Attributes["href"] != null ? node.Attributes["href"].Value : "");
             }
         }
 
@@ -139,7 +126,7 @@ namespace Project.Import.CreateUploadFile.Sites
 
                 if (productId == null) continue;
                 productId = productId.Replace("0002_002_", "");
-                Product.AddUpdate(productList, category, productId, displayName, productUrl, url);
+                Product.AddUpdate(productList, category, productId, displayName, productUrl != null ? productUrl.Value : "", url);
             }
 
             var pagerNodeList = doc.DocumentNode.SelectSingleNode("//div[@class='pagination']/a[@title='Next']");
