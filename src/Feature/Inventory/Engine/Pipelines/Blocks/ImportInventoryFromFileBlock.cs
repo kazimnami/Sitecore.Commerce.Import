@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Plugin.Catalog;
+using Sitecore.Commerce.Plugin.Inventory;
 using Sitecore.Framework.Pipelines;
 using System;
 using System.Collections.Generic;
@@ -11,19 +12,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Feature.Catalog.Engine
+namespace Feature.Inventory.Engine
 {
-    public class ImportCategoriesFromFileBlock : PipelineBlock<string, string, CommercePipelineExecutionContext>
+    public class ImportInventoryFromFileBlock : PipelineBlock<string, string, CommercePipelineExecutionContext>
     {
         private CommerceCommander CommerceCommander { get; set; }
 
-        public ImportCategoriesFromFileBlock(
+        public ImportInventoryFromFileBlock(
             IServiceProvider serviceProvider)
         {
             CommerceCommander = serviceProvider.GetService<CommerceCommander>();
         }
 
-        private void LogInitialization(CommercePipelineExecutionContext context, ImportCategoriesPolicy policy)
+        private void LogInitialization(CommercePipelineExecutionContext context, ImportInventoryPolicy policy)
         {
             var log = new StringBuilder();
             log.AppendLine($"{System.Environment.NewLine}");
@@ -42,9 +43,9 @@ namespace Feature.Catalog.Engine
 
         public override async Task<string> Run(string arg, CommercePipelineExecutionContext context)
         {
-            var importPolicy = context.GetPolicy<ImportCategoriesPolicy>();
-            var categoryComparerById = new ImportCategoryComparer(CategoryComparerConfiguration.ById);
-            var categoryComparerByData = new ImportCategoryComparer(CategoryComparerConfiguration.ByData);
+            var importPolicy = context.GetPolicy<ImportInventoryPolicy>();
+            var comparerById = new ImportInventoryComparer(InventoryComparerConfiguration.ById);
+            var comparerByData = new ImportInventoryComparer(InventoryComparerConfiguration.ByData);
 
             LogInitialization(context, importPolicy);
 
@@ -73,23 +74,19 @@ namespace Feature.Catalog.Engine
                                 importRawLines.Add(parser.ReadFields());
                             }
 
-                            var importItems = await CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
-                            var existingItems = await CommerceCommander.Command<GetCategoriesBulkCommand>().Process(context.CommerceContext, importItems);
+                            var importItems = await CommerceCommander.Command<TransformImportToInventoryInformationCommand>().Process(context.CommerceContext, importRawLines);
+                            var existingItems = await CommerceCommander.Command<GetInventoryBulkCommand>().Process(context.CommerceContext, importItems);
 
-                            var newItems = importItems.Except(existingItems, categoryComparerById);
-                            var changedItems = existingItems.Except(importItems, categoryComparerByData);
+                            var newItems = importItems.Except(existingItems, comparerById).ToList();
+                            var changedItems = existingItems.Except(importItems, comparerByData).ToList();
 
-                            await CommerceCommander.Command<CopyImportToCategoriesCommand>().Process(context.CommerceContext, importItems, changedItems);
+                            await CommerceCommander.Command<CopyImportToInventoryCommand>().Process(context.CommerceContext, importItems, changedItems);
 
-                            var associationsToCreate = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToCreateList).ToList();
-                            var associationsToRemove = importItems.SelectMany(i => i.GetPolicy<TransientImportCategoryDataPolicy>().ParentAssociationsToRemoveList).ToList();
-
-                            RemoveTransientData(importItems);
+                            var associationsToCreate = newItems.Select(i => new ParentAssociationModel(i.Id, i.InventorySet.EntityTarget)).ToList();
 
                             await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems));
                             await CommerceCommander.Command<AssociateToParentBulkCommand>().Process(context.CommerceContext, associationsToCreate);
-                            // TODO: complete this command
-                            await CommerceCommander.Command<DisassociateToParentBulkCommand>().Process(context.CommerceContext, associationsToRemove);
+                            await CommerceCommander.Command < AssociateInventoryToSellableItemCommand>().Process(context.CommerceContext, newItems);
 
                             await Task.Delay(importPolicy.SleepBetweenBatches);
                         }
@@ -109,15 +106,6 @@ namespace Feature.Catalog.Engine
             }
 
             return null;
-        }
-
-        private void RemoveTransientData(IEnumerable<Category> importItems)
-        {
-            foreach (var item in importItems)
-            {
-                if (item.HasPolicy<TransientImportCategoryDataPolicy>())
-                    item.RemovePolicy(typeof(TransientImportCategoryDataPolicy));
-            }
         }
     }
 }

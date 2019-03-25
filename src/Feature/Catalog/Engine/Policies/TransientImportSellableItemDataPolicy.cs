@@ -1,4 +1,5 @@
-﻿using Sitecore.Commerce.Core;
+﻿using Foundation.Import.Engine;
+using Sitecore.Commerce.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,8 @@ namespace Feature.Catalog.Engine
         public IList<CategoryAssociationModel> CategoryAssociationList { get; set; } = new List<CategoryAssociationModel>();
         public IList<string> ImageNameList { get; set; } = new List<string>();
 
-        public IList<ParentAssociationModel> ParentAssociationsToCreateList { get; set; } = new List<ParentAssociationModel>();
-        public IList<ParentAssociationModel> ParentAssociationsToRemoveList { get; set; } = new List<ParentAssociationModel>();
+        public IList<CatalogItemParentAssociationModel> ParentAssociationsToCreateList { get; set; } = new List<CatalogItemParentAssociationModel>();
+        public IList<CatalogItemParentAssociationModel> ParentAssociationsToRemoveList { get; set; } = new List<CatalogItemParentAssociationModel>();
 
     }
 }

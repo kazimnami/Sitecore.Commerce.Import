@@ -128,16 +128,16 @@ namespace Feature.Catalog.Engine
 
         private void TransformProductExtension(string[] rawFields, SellableItem item)
         {
-            item.Components.Add(new ProductExtensionComponent
-            {
-                Style = rawFields[StyleIndex],
-                FuelType = rawFields[FuelTypeIndex],
-                NaturalGasConversionAvailable = rawFields[NaturalGasConversionAvailableIndex],
-                DimensionsHeightHoodOpen = rawFields[DimensionsHeightHoodOpenIndex],
-                DimensionsHeightHoodClosed = rawFields[DimensionsHeightHoodClosedIndex],
-                DimensionsWidth = rawFields[DimensionsWidthIndex],
-                DimensionsDepth = rawFields[DimensionsDepthIndex]
-            });
+            //item.Components.Add(new ProductExtensionComponent
+            //{
+            //    Style = rawFields[StyleIndex],
+            //    FuelType = rawFields[FuelTypeIndex],
+            //    NaturalGasConversionAvailable = rawFields[NaturalGasConversionAvailableIndex],
+            //    DimensionsHeightHoodOpen = rawFields[DimensionsHeightHoodOpenIndex],
+            //    DimensionsHeightHoodClosed = rawFields[DimensionsHeightHoodClosedIndex],
+            //    DimensionsWidth = rawFields[DimensionsWidthIndex],
+            //    DimensionsDepth = rawFields[DimensionsDepthIndex]
+            //});
         }
 
         private void TransformTransientData(ImportSellableItemsPolicy importPolicy, string[] rawFields, SellableItem item, List<TransientImportSellableItemDataPolicy> transientDataList)
@@ -204,7 +204,7 @@ namespace Feature.Catalog.Engine
 
                         if (catalogAssociation.IsParent)
                         {
-                            transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, catalog.Id, catalog));
+                            transientData.ParentAssociationsToCreateList.Add(new CatalogItemParentAssociationModel(item.Id, catalog.Id, catalog));
                             parentCatalogList.Add(catalog.SitecoreId);
                         }
                     }
@@ -240,7 +240,7 @@ namespace Feature.Catalog.Engine
                     {
                         // Found category
                         itemsCategoryList.Add(category.SitecoreId);
-                        transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
+                        transientData.ParentAssociationsToCreateList.Add(new CatalogItemParentAssociationModel(item.Id, categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
                     }
                     else
                     {

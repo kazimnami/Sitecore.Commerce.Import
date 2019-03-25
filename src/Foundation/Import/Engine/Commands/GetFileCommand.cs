@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace Feature.Catalog.Engine
+namespace Foundation.Import.Engine
 {
     public class GetFileCommand : CommerceCommand
     {

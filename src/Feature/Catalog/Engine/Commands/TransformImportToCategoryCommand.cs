@@ -63,13 +63,13 @@ namespace Feature.Catalog.Engine
             var categoryRecord = rawFields[ParentCategoryNameIndex].Split(new string[] { importPolicy.FileRecordSeparator }, StringSplitOptions.RemoveEmptyEntries).ToList();
             foreach (var categoryUnit in categoryRecord)
             {
-                data.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), categoryUnit.ToCategoryId(catalogName)));
+                data.ParentAssociationsToCreateList.Add(new CatalogItemParentAssociationModel(item.Id, catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), categoryUnit.ToCategoryId(catalogName)));
                 data.CategoryAssociationList.Add(new CategoryAssociationModel { CatalogName = catalogName, CategoryName = categoryUnit });
             }
 
             if (data.CategoryAssociationList.Count().Equals(0))
             {
-                data.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>()));
+                data.ParentAssociationsToCreateList.Add(new CatalogItemParentAssociationModel(item.Id, catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), catalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>()));
                 data.CatalogAssociationList.Add(new CatalogAssociationModel { Name = catalogName, IsParent = true });
             }
             else
@@ -159,7 +159,7 @@ namespace Feature.Catalog.Engine
                     {
                         // Found category
                         itemsCategoryList.Add(category.SitecoreId);
-                        transientData.ParentAssociationsToCreateList.Add(new ParentAssociationModel(item.Id, categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
+                        transientData.ParentAssociationsToCreateList.Add(new CatalogItemParentAssociationModel(item.Id, categoryAssociation.CatalogName.ToEntityId<Sitecore.Commerce.Plugin.Catalog.Catalog>(), category));
                     }
                     else
                     {

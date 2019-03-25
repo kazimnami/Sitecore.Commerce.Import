@@ -7,7 +7,7 @@ namespace Feature.Catalog.Engine
     {
         public IList<CatalogAssociationModel> CatalogAssociationList { get; set; } = new List<CatalogAssociationModel>();
         public IList<CategoryAssociationModel> CategoryAssociationList { get; set; } = new List<CategoryAssociationModel>();
-        public IList<ParentAssociationModel> ParentAssociationsToCreateList { get; set; } = new List<ParentAssociationModel>();
-        public IList<ParentAssociationModel> ParentAssociationsToRemoveList { get; set; } = new List<ParentAssociationModel>();
+        public IList<CatalogItemParentAssociationModel> ParentAssociationsToCreateList { get; set; } = new List<CatalogItemParentAssociationModel>();
+        public IList<CatalogItemParentAssociationModel> ParentAssociationsToRemoveList { get; set; } = new List<CatalogItemParentAssociationModel>();
     }
 }

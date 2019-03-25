@@ -1,17 +1,16 @@
-﻿using Sitecore.Commerce.Plugin.Catalog;
+﻿using Foundation.Import.Engine;
+using Sitecore.Commerce.Plugin.Catalog;
 
 namespace Feature.Catalog.Engine
 {
-    public class ParentAssociationModel
+    public class CatalogItemParentAssociationModel : ParentAssociationModel
     {
-        public string ItemId { get; set; }
         public string CatalogId { get; set; }
-        public string ParentId { get; set; }
         public string ParentSitecoreId { get; set; }
 
-        public ParentAssociationModel() { }
+        public CatalogItemParentAssociationModel() { }
 
-        public ParentAssociationModel(string itemId, string catalogId, CatalogItemBase parent)
+        public CatalogItemParentAssociationModel(string itemId, string catalogId, CatalogItemBase parent)
         {
             ItemId = itemId;
             CatalogId = catalogId;
@@ -19,7 +18,7 @@ namespace Feature.Catalog.Engine
             ParentSitecoreId = parent.SitecoreId;
         }
 
-        public ParentAssociationModel(string itemId, string catalogId, string parentId)
+        public CatalogItemParentAssociationModel(string itemId, string catalogId, string parentId)
         {
             ItemId = itemId;
             CatalogId = catalogId;

@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Feature.Catalog.Engine
+namespace Foundation.Import.Engine
 {
     public class PersistEntityBulkCommand : CommerceCommand
     {
@@ -25,7 +25,7 @@ namespace Feature.Catalog.Engine
                     await PerformTransaction(commerceContext, async () =>
                     {
                         var arg = new PersistEntityArgument(item);
-                        await Pipeline<IPersistEntityPipeline>().Run(arg, commerceContext.GetPipelineContextOptions());
+                        await Pipeline<IPersistEntityPipeline>().Run(arg, commerceContext.PipelineContextOptions);
                     });
                 }
 

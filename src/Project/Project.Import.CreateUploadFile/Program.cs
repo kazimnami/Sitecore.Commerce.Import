@@ -163,8 +163,8 @@ namespace Project.Import.CreateUploadFile
             {
                 var headerList = new List<string>
                 {
-                    "InventoryName", // 0
-                    "ProductName", // 1
+                    "InventoryId", // 0
+                    "ProductId", // 1
                     "Quantity", // 2
                 };
 
@@ -174,8 +174,8 @@ namespace Project.Import.CreateUploadFile
                 foreach (var product in productList.Values)
                 {
                     line.Clear();
-                    line.Append(config.CatalogName + ","); //"InventoryName", // 0
-                    line.Append(product.Id + ","); //"ProductName", // 1
+                    line.Append(config.CatalogName + "_Inventory,"); //"InventoryId", // 0
+                    line.Append(product.Id + ","); //"ProductId", // 1
                     line.Append("100"); //"Quantity", // 2
 
                     file.WriteLine(line);

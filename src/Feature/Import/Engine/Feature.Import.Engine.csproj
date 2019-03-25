@@ -19,6 +19,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Catalog\Engine\Feature.Catalog.Engine.csproj" />
+    <ProjectReference Include="..\..\Inventory\Engine\Feature.Inventory.Engine.csproj" />
   </ItemGroup>
 
 </Project>

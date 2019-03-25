@@ -4,7 +4,7 @@ using Sitecore.Commerce.Core.Commands;
 using System;
 using System.IO;
 
-namespace Feature.Catalog.Engine
+namespace Foundation.Import.Engine
 {
     public class MoveFileCommand : CommerceCommand
     {

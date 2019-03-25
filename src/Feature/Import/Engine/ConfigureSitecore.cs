@@ -19,7 +19,7 @@ namespace Feature.Import.Engine
                     .Add<Catalog.Engine.ImportCategoriesFromFileBlock>()
                     //.Add<Media.Engine.IImportMediaPipeline>()
                     .Add<Catalog.Engine.ImportSellableItemsFromFileBlock>()
-                    //.Add<Inventory.Engine.IImportInventoryPipeline>()
+                    .Add<Inventory.Engine.ImportInventoryFromFileBlock>()
                 )
             );
         }

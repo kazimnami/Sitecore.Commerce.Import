@@ -31,6 +31,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Media", "Media", "{6249F3D3
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Feature.Media.Engine", "src\Feature\Media\Engine\Feature.Media.Engine.csproj", "{962F8937-F1A6-4D31-987E-FD2251BE1397}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Import", "Import", "{D900D07E-3309-4F96-B351-A0B4FFD66F61}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Foundation.Import.Engine", "src\Foundation\Import\Engine\Foundation.Import.Engine.csproj", "{8FD25B64-85E6-45D0-A542-31880031CF4B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +65,10 @@ Global
 		{962F8937-F1A6-4D31-987E-FD2251BE1397}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{962F8937-F1A6-4D31-987E-FD2251BE1397}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{962F8937-F1A6-4D31-987E-FD2251BE1397}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FD25B64-85E6-45D0-A542-31880031CF4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FD25B64-85E6-45D0-A542-31880031CF4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FD25B64-85E6-45D0-A542-31880031CF4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FD25B64-85E6-45D0-A542-31880031CF4B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,6 +84,8 @@ Global
 		{75FA2948-8CC8-4AC0-BCC9-9E77EE919957} = {05ACF7F2-7A44-4956-B2CF-389A5CAADF82}
 		{6249F3D3-7E13-4B1B-84E7-1D42821AB18F} = {E59C2EB9-342A-47E8-9E8A-7B67CC8CB138}
 		{962F8937-F1A6-4D31-987E-FD2251BE1397} = {6249F3D3-7E13-4B1B-84E7-1D42821AB18F}
+		{D900D07E-3309-4F96-B351-A0B4FFD66F61} = {19C9C279-28EE-465C-A27F-18F09551902D}
+		{8FD25B64-85E6-45D0-A542-31880031CF4B} = {D900D07E-3309-4F96-B351-A0B4FFD66F61}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C36D1CB5-2401-4813-A55A-99E5891DACF0}

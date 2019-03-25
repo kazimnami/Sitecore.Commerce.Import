@@ -9,5 +9,9 @@
     <PackageReference Include="Sitecore.Commerce.Plugin.Catalog" Version="3.0.*" />
     <PackageReference Include="Sitecore.Commerce.Plugin.SQL" Version="3.0.*" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Foundation\Import\Engine\Foundation.Import.Engine.csproj" />
+  </ItemGroup>
 
 </Project>

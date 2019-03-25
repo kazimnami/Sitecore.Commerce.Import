@@ -120,7 +120,7 @@ namespace Feature.Catalog.Engine
 
                     if (category != null)
                     {
-                        transientData.ParentAssociationsToRemoveList.Add(new ParentAssociationModel(existingItem.Id, catalogContext.Catalog.Id, category));
+                        transientData.ParentAssociationsToRemoveList.Add(new CatalogItemParentAssociationModel(existingItem.Id, catalogContext.Catalog.Id, category));
 
                         found = true;
                         break;

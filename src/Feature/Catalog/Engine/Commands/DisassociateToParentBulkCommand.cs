@@ -1,4 +1,5 @@
-﻿using Sitecore.Commerce.Core;
+﻿using Foundation.Import.Engine;
+using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Core.Commands;
 using Sitecore.Commerce.Plugin.Catalog;
 using System;
@@ -11,7 +12,7 @@ namespace Feature.Catalog.Engine
     {
         public DisassociateToParentBulkCommand(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
-        public async Task<bool> Process(CommerceContext commerceContext, IEnumerable<ParentAssociationModel> associationList)
+        public async Task<bool> Process(CommerceContext commerceContext, IEnumerable<CatalogItemParentAssociationModel> associationList)
         {
             using (CommandActivity.Start(commerceContext, this))
             {

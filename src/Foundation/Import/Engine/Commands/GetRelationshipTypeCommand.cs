@@ -1,11 +1,10 @@
 ﻿using Sitecore.Commerce.Core;
 using Sitecore.Commerce.Core.Commands;
 using Sitecore.Commerce.Plugin.Catalog;
+using Sitecore.Commerce.Plugin.Inventory;
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace Feature.Catalog.Engine
+namespace Foundation.Import.Engine
 {
     public class GetRelationshipTypeCommand : CommerceCommand
     {
@@ -24,6 +23,10 @@ namespace Feature.Catalog.Engine
                 {
                     if (itemId.StartsWith(CommerceEntity.IdPrefix<SellableItem>())) return CatalogConstants.CategoryToSellableItem;
                     else if (itemId.StartsWith(CommerceEntity.IdPrefix<Category>())) return CatalogConstants.CategoryToCategory;
+                }
+                else if (parentId.StartsWith(CommerceEntity.IdPrefix<InventorySet>()))
+                {
+                    if (itemId.StartsWith(CommerceEntity.IdPrefix<InventoryInformation>())) return InventoryConstants.InventorySetToInventoryInformation;
                 }
                 throw new Exception($"Error, can not determine relationship type between ItemId '{itemId}' and ParentId '{parentId}'.");
             }

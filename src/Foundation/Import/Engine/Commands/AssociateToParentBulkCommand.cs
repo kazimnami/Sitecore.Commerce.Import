@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Feature.Catalog.Engine
+namespace Foundation.Import.Engine
 {
     public class AssociateToParentBulkCommand : CommerceCommand
     {
