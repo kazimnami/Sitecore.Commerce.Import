@@ -85,9 +85,9 @@ namespace Project.Import.CreateUploadFile
                     line.Append(product.DisplayName?.StringToCSVCell() + ","); //"ProductName", // 1
                     line.Append(product.DisplayName?.StringToCSVCell() + ",");//"DisplayName", // 2
                     line.Append(product.Description?.StringToCSVCell() + ","); //"Description", // 3
-                    line.Append(product.Brand?.Trim() + ",");//"Brand", // 4
-                    line.Append(product.Manufacturer?.Trim() + ",");//"Manufacturer", // 5
-                    line.Append(product.TypeOfGood?.Trim() + ",");//"TypeOfGood", // 6
+                    line.Append(product.Brand?.Trim().StringToCSVCell() + ",");//"Brand", // 4
+                    line.Append(product.Manufacturer?.Trim().StringToCSVCell() + ",");//"Manufacturer", // 5
+                    line.Append(product.TypeOfGood?.Trim()?.StringToCSVCell() + ",");//"TypeOfGood", // 6
                     line.Append(",");//"Tags", // 7
                     line.Append("USD-" + product.Price + ",");//"ListPrice", // 8
                     line.Append(string.Join('|', product.ImageNameList) + ",");//"Images", // 9
