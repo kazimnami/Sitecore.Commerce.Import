@@ -86,7 +86,7 @@ namespace Feature.Inventory.Engine
 
                             await CommerceCommander.Command<PersistEntityBulkCommand>().Process(context.CommerceContext, newItems.Union(changedItems));
                             await CommerceCommander.Command<AssociateToParentBulkCommand>().Process(context.CommerceContext, associationsToCreate);
-                            await CommerceCommander.Command < AssociateInventoryToSellableItemCommand>().Process(context.CommerceContext, newItems);
+                            await CommerceCommander.Command<AssociateInventoryToSellableItemCommand>().Process(context.CommerceContext, newItems);
 
                             await Task.Delay(importPolicy.SleepBetweenBatches);
                         }

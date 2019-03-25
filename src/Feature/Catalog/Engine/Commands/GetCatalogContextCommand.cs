@@ -38,8 +38,10 @@ namespace Feature.Catalog.Engine
                     if (model == null)
                     {
                         var catalog = allCatalogs.FirstOrDefault(c => c.Name.Equals(catalogName));
-                        var allCategories = await Command<GetCategoriesCommand>().Process(commerceContext, catalogName);
+                        var allCategories = (await Command<GetCategoriesCommand>().Process(commerceContext, catalogName)).ToList();
                         if (allCategories == null) allCategories = new List<Category>();
+                        // Currently the GetCategoriesCommand returns all categories even when passing in a catalogName.
+                        allCategories = allCategories.Where(c => c.Id.CatalogNameFromCategoryId().Equals(catalogName)).ToList();
 
                         model = new CatalogContextModel
                         {

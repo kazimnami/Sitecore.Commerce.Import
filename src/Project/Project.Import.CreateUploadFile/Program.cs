@@ -175,7 +175,7 @@ namespace Project.Import.CreateUploadFile
                 {
                     line.Clear();
                     line.Append(config.CatalogName + "_Inventory,"); //"InventoryId", // 0
-                    line.Append(product.Id + ","); //"ProductId", // 1
+                    line.Append(config.CatalogName + product.Id + ","); //"ProductId", // 1
                     line.Append("100"); //"Quantity", // 2
 
                     file.WriteLine(line);

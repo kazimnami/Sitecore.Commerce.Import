@@ -76,8 +76,8 @@ namespace Feature.Catalog.Engine
                             var importItems = await CommerceCommander.Command<TransformImportToCategoryCommand>().Process(context.CommerceContext, importRawLines);
                             var existingItems = await CommerceCommander.Command<GetCategoriesBulkCommand>().Process(context.CommerceContext, importItems);
 
-                            var newItems = importItems.Except(existingItems, categoryComparerById);
-                            var changedItems = existingItems.Except(importItems, categoryComparerByData);
+                            var newItems = importItems.Except(existingItems, categoryComparerById).ToList();
+                            var changedItems = existingItems.Except(importItems, categoryComparerByData).ToList();
 
                             await CommerceCommander.Command<CopyImportToCategoriesCommand>().Process(context.CommerceContext, importItems, changedItems);
 
